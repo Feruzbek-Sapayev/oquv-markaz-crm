@@ -1,0 +1,164 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dars Jadvali | {{ block.super }}{% endblock %}
+
+{% block page_title %}Dars Jadvali{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/schedule.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 page-header">
+    <div>
+        <h4 class="mb-1" style="font-weight: 800; color: var(--text-heading);">Haftalik Dars Jadvali</h4>
+        <p class="subtitle-text mb-0">Barcha darslarning haftalik taqsimoti</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button onclick="window.print()" class="btn-outline-custom">
+            <i class="fas fa-print me-2"></i> PDF / Chop etish
+        </button>
+    </div>
+</div>
+
+<!-- View Toggles -->
+<div class="card-custom mb-4" style="padding: 10px;">
+    <div class="d-flex gap-2">
+        <button class="btn-primary-custom" id="btn-weekly" onclick="switchView('weekly')">Haftalik Ko'rinish</button>
+        <button class="btn-outline-custom" id="btn-rooms" onclick="switchView('rooms')">Xonalar Bandligi</button>
+    </div>
+</div>
+
+<!-- Weekly View -->
+<div id="weekly-view">
+    <!-- Mobile Day Tabs -->
+    <div class="tab-nav-mobile">
+        {% for day, lessons in schedule.items %}
+        <button class="tab-btn {% if forloop.first %}active{% endif %}" onclick="showDay('{{ forloop.counter }}', this)">
+            {{ day }}
+        </button>
+        {% endfor %}
+    </div>
+
+    <div class="timetable-wrapper">
+        <div class="timetable-grid">
+            {% for day, lessons in schedule.items %}
+            <div class="day-col {% if forloop.first %}active-day{% endif %}" id="col-{{ forloop.counter }}">
+                <div class="day-name-header" id="header-{{ forloop.counter }}">
+                    {{ day }}
+                </div>
+                <div class="lessons-container">
+                    {% if lessons %}
+                        {% for lesson in lessons %}
+                        <div class="lesson-card color-{{ lesson.id|add:0|slugify|last }}">
+                            <div class="lesson-course-name">{{ lesson.course.name }}</div>
+                            <div class="lesson-time-range">{{ lesson.start_time|time:"H:i" }} - {{ lesson.end_time|time:"H:i" }}</div>
+                            
+                            <div class="lesson-meta">
+                                <span><i class="fas fa-users"></i> {{ lesson.student_count }}</span>
+                                <span>{% if lesson.room %}{{ lesson.room }}{% else %}-{% endif %} xona</span>
+                                <span><i class="fas fa-layer-group"></i> {{ lesson.name }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-slot-msg">Darslar mavjud emas</div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Room View -->
+<div id="rooms-view" style="display: none;">
+    <div class="card-custom" style="overflow-x: auto;">
+        <table class="table-custom" style="min-width: 800px; border-collapse: separate; border-spacing: 4px;">
+            <thead>
+                <tr>
+                    <th style="width: 100px; background: var(--bg-main);">Xona</th>
+                    {% for day in schedule.keys %}
+                        <th>{{ day }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for room, day_data in room_data.items %}
+                <tr>
+                    <td style="font-weight: 800; background: rgba(99,102,241,0.05); color: var(--primary);">{{ room }}</td>
+                    {% for day, lessons in day_data.items %}
+                    <td style="vertical-align: top; padding: 4px;">
+                        {% for g in lessons %}
+                        <div style="background: var(--bg-main); border-radius: 6px; padding: 6px; margin-bottom: 4px; border-left: 3px solid var(--primary); font-size: 11px;">
+                            <div style="font-weight: 700;">{{ g.start_time|time:"H:i" }}</div>
+                            <div style="color: var(--text-muted);">{{ g.course.name }}</div>
+                        </div>
+                        {% endfor %}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function switchView(view) {
+        const weekly = document.getElementById('weekly-view');
+        const rooms = document.getElementById('rooms-view');
+        const btnWeekly = document.getElementById('btn-weekly');
+        const btnRooms = document.getElementById('btn-rooms');
+
+        if (view === 'weekly') {
+            weekly.style.display = 'block';
+            rooms.style.display = 'none';
+            btnWeekly.className = 'btn-primary-custom';
+            btnRooms.className = 'btn-outline-custom';
+        } else {
+            weekly.style.display = 'none';
+            rooms.style.display = 'block';
+            btnWeekly.className = 'btn-outline-custom';
+            btnRooms.className = 'btn-primary-custom';
+        }
+    }
+
+    function showDay(index, btn) {
+        // Hide all cols
+        document.querySelectorAll('.day-col').forEach(col => col.classList.remove('active-day'));
+        // Show selected
+        document.getElementById('col-' + index).classList.add('active-day');
+        
+        // Update tabs
+        document.querySelectorAll('.tab-btn').forEach(tb => tb.classList.remove('active'));
+        btn.classList.add('active');
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const d = new Date();
+        const dayIndex = d.getDay(); // 0 (Sun) to 6 (Sat)
+        let uzDayIndex;
+        if (dayIndex === 0) uzDayIndex = 7; // Sunday
+        else uzDayIndex = dayIndex; // Mon-Sat (1-6)
+        
+        // Highlighting today on desktop
+        const header = document.getElementById('header-' + uzDayIndex);
+        if (header) {
+            header.classList.add('is-today');
+            header.textContent += ' (BUGUN)';
+        }
+
+        // On mobile, automatically show today
+        if (window.innerWidth <= 768) {
+            const tabs = document.querySelectorAll('.tab-btn');
+            if (tabs[uzDayIndex - 1]) {
+                tabs[uzDayIndex - 1].click();
+            }
+        }
+    });
+</script>
+{% endblock %}

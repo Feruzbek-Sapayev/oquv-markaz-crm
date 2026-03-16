@@ -1,0 +1,350 @@
+{% extends 'base.html' %}
+{% load currency_tags %}
+{% block title %}{{ student }} | O'quvchi{% endblock %}
+{% block page_title %}O'quvchi ma'lumotlari{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <div class="page-title">{{ student.get_full_name }}</div>
+        <div class="page-subtitle">O'quvchi profili</div>
+    </div>
+    <div class="d-flex gap-2">
+        {% if user.is_admin_role %}
+        <a href="{% url 'students:edit' student.pk %}" class="btn-outline-custom"><i class="fas fa-edit"></i>
+            Tahrirlash</a>
+        {% endif %}
+        <a href="{% url 'students:list' %}" class="btn-outline-custom"><i class="fas fa-arrow-left"></i> Orqaga</a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Student Info Card -->
+    <div class="col-lg-4">
+        <div class="card-custom">
+            <div class="card-body-custom" style="text-align:center;padding-top:32px;">
+                {% if student.photo %}
+                    <img src="{{ student.photo.url }}" class="avatar-img" style="width:90px; height:90px; margin-bottom:16px;">
+                {% else %}
+                    <div class="avatar-circle" style="width:90px; height:90px; font-size:36px; margin:0 auto 16px;">
+                        {{ student.first_name|first }}
+                    </div>
+                {% endif %}
+                <h4 style="font-size:17px;font-weight:700;margin-bottom:4px;">{{ student.get_full_name }}</h4>
+                <span
+                    class="badge-custom {% if student.status == 'active' %}badge-active{% else %}badge-inactive{% endif %}">
+                    {{ student.get_status_display }}
+                </span>
+
+                <!-- Lead Status -->
+                <div style="margin-top: 20px; padding: 12px; border-radius: 12px; border: 1px solid {{ student.lead_status.color }}33; background: {{ student.lead_status.color }}08; display: flex; align-items: center; gap: 12px; text-align: left;">
+                    <div style="font-size: 24px; min-width: 32px; text-align: center;">{{ student.lead_status.icon }}</div>
+                    <div>
+                        <div style="font-weight: 700; font-size: 14px; color: {{ student.lead_status.color }};">{{ student.lead_status.label }}</div>
+                        <div style="font-size: 11px; color: var(--text-muted); line-height: 1.2;">{{ student.lead_status.desc }}</div>
+                    </div>
+                </div>
+
+                <div style="margin-top:24px;text-align:left;">
+                    {% include "includes/_info_row.html" with icon="fa-phone" label="Telefon" value=student.phone %}
+                    {% if student.parent_phone %}
+                        {% include "includes/_info_row.html" with icon="fa-phone-volume" label="Ota-ona" value=student.parent_phone %}
+                    {% endif %}
+                    {% include "includes/_info_row.html" with icon="fa-venus-mars" label="Jins" value=student.get_gender_display %}
+                    {% if student.birth_date %}
+                        {% include "includes/_info_row.html" with icon="fa-cake-candles" label="T.sanasi" value=student.birth_date %}
+                    {% endif %}
+                    {% if student.address %}
+                        {% include "includes/_info_row.html" with icon="fa-location-dot" label="Manzil" value=student.address %}
+                    {% endif %}
+                    {% include "includes/_info_row.html" with icon="fa-calendar" label="Qo'shildi" value=student.registered_at %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <!-- Progress Chart -->
+        <div class="card-custom mb-4">
+            <div class="card-header-custom">
+                <h5><i class="fas fa-chart-line me-2" style="color:var(--primary);"></i>O'zlashtirish grafik (Imtihonlar)</h5>
+            </div>
+            <div class="card-body-custom">
+                <div style="height: 300px; position: relative;">
+                    {% if chart_data %}
+                        <canvas id="progressChart"></canvas>
+                    {% else %}
+                        <div class="empty-state" style="padding: 40px;">
+                            <div class="empty-icon" style="font-size: 32px;">📊</div>
+                            <h5 style="font-size: 14px; margin-top: 10px;">Ma'lumotlar yetarli emas</h5>
+                            <p style="font-size: 12px;">Grafik paydo bo'lishi uchun kamida bitta imtihon natijasi kerak.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Exams List -->
+        <div class="card-custom mb-4">
+            <div class="card-header-custom">
+                <h5><i class="fas fa-spell-check me-2" style="color:var(--secondary);"></i>Imtihon natijalari</h5>
+                {% if user.is_admin_role or user.is_teacher %}
+                <button class="btn-primary-custom" style="padding:6px 12px;font-size:12px;" data-bs-toggle="modal" data-bs-target="#addExamModal">
+                    <i class="fas fa-plus"></i> Ball qo'shish
+                </button>
+                {% endif %}
+            </div>
+            <div style="overflow-x:auto;">
+                <table class="table-custom">
+                    <thead>
+                        <tr>
+                            <th>Sana</th>
+                            <th>Imtihon</th>
+                            <th>Guruh</th>
+                            <th>Natija</th>
+                            <th>Foiz</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for exam in exams %}
+                        <tr>
+                            <td style="font-size:12px;color:var(--text-muted);">{{ exam.date|date:"d.m.Y" }}</td>
+                            <td style="font-weight:600;">{{ exam.title }}</td>
+                            <td style="font-size:12px;">{{ exam.group.name }}</td>
+                            <td>
+                                <div style="font-weight:700;">
+                                    <span style="color: {% if exam.score >= 80 %}var(--success){% elif exam.score >= 60 %}var(--warning){% else %}var(--danger){% endif %};">
+                                        {{ exam.score }}
+                                    </span>
+                                    <span style="color:var(--text-muted); font-size: 11px;">/ {{ exam.max_score }}</span>
+                                </div>
+                            </td>
+                            <td>
+                                {% widthratio exam.score exam.max_score 100 as percent %}
+                                <div class="progress" style="height: 6px; width: 60px; background: rgba(0,0,0,0.05); border-radius: 10px;">
+                                    <div class="progress-bar" style="width: {{ percent }}%; background: {% if exam.score >= 80 %}var(--success){% elif exam.score >= 60 %}var(--warning){% else %}var(--danger){% endif %};"></div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" style="text-align:center;padding:20px;color:var(--text-muted);">Imtihonlar mavjud emas</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Enrollments -->
+        <div class="card-custom mb-4">
+            <div class="card-header-custom">
+                <h5><i class="fas fa-users me-2" style="color:var(--primary);"></i>Guruhlar</h5>
+            </div>
+            <div style="overflow-x:auto;">
+                <table class="table-custom">
+                    <thead>
+                        <tr>
+                            <th>Guruh</th>
+                            <th>Kurs</th>
+                            <th>O'qituvchi</th>
+                            <th>Chegirma</th>
+                            <th>Holat</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for e in enrollments %}
+                        <tr>
+                            <td style="font-weight:600;">{{ e.group.name }}</td>
+                            <td style="font-size:12px;color:var(--text-muted);">{{ e.group.course.name }}</td>
+                            <td style="font-size:13px;">
+                                {% if e.group.teacher %}
+                                    <div style="font-size:12px;">{{ e.group.teacher.get_full_name }}</div>
+                                {% else %}
+                                    <span style="color:var(--text-muted);font-size:12px;">—</span>
+                                {% endif %}
+                            </td>
+                            <td>{% if e.discount_percent %}<span class="badge-custom badge-partial">{{ e.discount_percent }}%</span>{% else %}—{% endif %}</td>
+                            <td>
+                                <span class="badge-custom {% if e.is_active %}badge-active{% else %}badge-inactive{% endif %}">
+                                    {% if e.is_active %}Faol{% else %}Chiqdi{% endif %}
+                                </span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" style="text-align:center;padding:20px;color:var(--text-muted);">Hech qanday
+                                guruhga qo'shilmagan</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Payments -->
+        <div class="card-custom mb-4">
+            <div class="card-header-custom">
+                <h5><i class="fas fa-receipt me-2" style="color:var(--success);"></i>To'lovlar tarixi</h5>
+                {% if user.is_admin_role %}
+                <a href="{% url 'payments:create' %}?student={{ student.pk }}" class="btn-primary-custom"
+                    style="padding:6px 12px;font-size:12px;">
+                    <i class="fas fa-plus"></i> To'lov
+                </a>
+                {% endif %}
+            </div>
+            <div style="overflow-x:auto;">
+                <table class="table-custom">
+                    <thead>
+                        <tr>
+                            <th>Oy/Yil</th>
+                            <th>Guruh</th>
+                            <th>To'langan</th>
+                            <th>Kutilgan</th>
+                            <th>Holat</th>
+                            <th>PDF</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in payments %}
+                        <tr>
+                            <td style="font-weight:600;">{{ p.month }}/{{ p.year }}</td>
+                            <td style="font-size:12px;">{{ p.group.name }}</td>
+                            <td style="font-weight:600;color:var(--success);">{{ p.amount|money_format }} so'm</td>
+                            <td style="font-size:12px;color:var(--text-muted);">{{ p.expected_amount|money_format }}
+                                so'm</td>
+                            <td><span class="badge-custom {% if p.status == 'paid' %}badge-paid{% elif p.status == 'unpaid' %}badge-unpaid{% else %}badge-partial{% endif %}">{{ p.get_status_display }}</span></td>
+                            <td><a href="{% url 'payments:pdf' p.pk %}" target="_blank" style="color:var(--danger);"><i
+                                        class="fas fa-file-pdf"></i></a></td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" style="text-align:center;padding:20px;color:var(--text-muted);">To'lovlar
+                                mavjud emas</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Attendance -->
+        <div class="card-custom">
+            <div class="card-header-custom">
+                <h5><i class="fas fa-calendar-check me-2" style="color:var(--warning);"></i>Davomat (oxirgi 20)</h5>
+            </div>
+            <div class="card-body-custom">
+                <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                    {% for a in attendances %}
+                    <div title="{{ a.session.date }} | {{ a.session.group }}" style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;
+            {% if a.status == 'present' %}background:rgba(16,185,129,0.15);color:var(--success);
+            {% elif a.status == 'absent' %}background:rgba(239,68,68,0.15);color:var(--danger);
+            {% elif a.status == 'late' %}background:rgba(245,158,11,0.15);color:var(--warning);
+            {% else %}background:rgba(148,163,184,0.15);color:#64748b;{% endif %}
+            cursor:default;">
+                        {% if a.status == 'present' %}✓{% elif a.status == 'absent' %}✗{% elif a.status == 'late' %}~{% else %}U{% endif %}
+                    </div>
+                    {% empty %}
+                    <p style="color:var(--text-muted);font-size:13px;">Davomat yozilmagan</p>
+                    {% endfor %}
+                </div>
+                <div style="display:flex;gap:16px;margin-top:12px;">
+                    <span style="font-size:11px;"><span style="color:var(--success);">✓</span> Keldi</span>
+                    <span style="font-size:11px;"><span style="color:var(--danger);">✗</span> Kelmadi</span>
+                    <span style="font-size:11px;"><span style="color:var(--warning);">~</span> Kech</span>
+                    <span style="font-size:11px;"><span style="color:#64748b;">U</span> Uzrli</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if user.is_admin_role or user.is_teacher %}
+<!-- Add Exam Modal -->
+<div class="modal fade" id="addExamModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title" style="font-weight: 700;">Imtihon bali qo'shish</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{% url 'students:add_exam' student.pk %}" method="POST">
+                {% csrf_token %}
+                <div class="modal-body">
+                    {{ exam_form.student }}
+                    <div class="mb-3">
+                        <label class="form-label">Guruh</label>
+                        {{ exam_form.group }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Imtihon nomi</label>
+                        {{ exam_form.title }}
+                    </div>
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <label class="form-label">Ball</label>
+                            {{ exam_form.score }}
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label class="form-label">Max ball</label>
+                            {{ exam_form.max_score }}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Sana</label>
+                        {{ exam_form.date }}
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn-outline-custom" data-bs-dismiss="modal">Bekor qilish</button>
+                    <button type="submit" class="btn-primary-custom">Saqlash</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    {% if chart_data %}
+    const ctx = document.getElementById('progressChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: {{ chart_labels|safe }},
+            datasets: [{
+                label: 'Ball',
+                data: {{ chart_data|safe }},
+                borderColor: '#6366f1',
+                backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                borderWidth: 3,
+                tension: 0.4,
+                fill: true,
+                pointBackgroundColor: '#6366f1',
+                pointRadius: 5,
+                pointHoverRadius: 7
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    grid: { color: 'rgba(0,0,0,0.05)' }
+                },
+                x: {
+                    grid: { display: false }
+                }
+            }
+        }
+    });
+    {% endif %}
+</script>
+{% endblock %}

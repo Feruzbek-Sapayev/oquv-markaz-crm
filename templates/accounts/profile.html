@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% block title %}Profil{% endblock %}
+{% block page_title %}Mening profilim{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <div class="page-title">{{ user.get_full_name|default:user.username }}</div>
+        <div class="page-subtitle">Shaxsiy profil</div>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'accounts:profile_edit' %}" class="btn-outline-custom"><i class="fas fa-edit"></i> Tahrirlash</a>
+    </div>
+</div>
+
+<div class="row g-4 justify-content-center">
+    <div class="col-lg-5">
+        <div class="card-custom">
+            <div class="card-body-custom" style="text-align:center;padding-top:32px;">
+                {% if user.get_avatar_url %}
+                <img src="{{ user.get_avatar_url }}"
+                    style="width:100px;height:100px;border-radius:50%;object-fit:cover;border:4px solid rgba(99,102,241,0.2);margin-bottom:16px;">
+                {% else %}
+                <div
+                    style="width:100px;height:100px;background:linear-gradient(135deg,var(--primary),var(--secondary));border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:40px;font-weight:800;margin:0 auto 16px;">
+                    {{ user.username|first|upper }}
+                </div>
+                {% endif %}
+                <h4 style="font-size:20px;font-weight:700;margin-bottom:4px;">{{ user.get_full_name|default:user.username }}</h4>
+                <span class="badge-custom
+                    {% if user.role == 'superadmin' %}badge-unpaid
+                    {% elif user.role == 'admin' %}badge-partial
+                    {% elif user.role == 'teacher' %}badge-paid
+                    {% elif user.role == 'student' %}badge-active
+                    {% else %}badge-inactive{% endif %}">
+                    {{ user.get_role_display }}
+                </span>
+
+                <div style="margin-top:28px;text-align:left;">
+                    {% include "includes/_info_row.html" with icon="fa-phone" label="Telefon" value=user.phone|default:"—" %}
+
+                    {% if user.email %}
+                    {% include "includes/_info_row.html" with icon="fa-envelope" label="Email" value=user.email %}
+                    {% endif %}
+
+                    {% if profile and profile.birth_date %}
+                    {% include "includes/_info_row.html" with icon="fa-cake-candles" label="T.sanasi" value=profile.birth_date %}
+                    {% endif %}
+
+                    {% if profile_type == 'student' and profile.get_gender_display %}
+                    {% include "includes/_info_row.html" with icon="fa-venus-mars" label="Jins" value=profile.get_gender_display %}
+                    {% endif %}
+
+                    {% if profile_type == 'teacher' and profile.get_gender_display %}
+                    {% include "includes/_info_row.html" with icon="fa-venus-mars" label="Jins" value=profile.get_gender_display %}
+                    {% endif %}
+
+                    {% if profile and profile.middle_name %}
+                    {% include "includes/_info_row.html" with icon="fa-user" label="Otasining ismi" value=profile.middle_name %}
+                    {% endif %}
+
+                    {% if profile_type == 'student' and profile.address %}
+                    {% include "includes/_info_row.html" with icon="fa-location-dot" label="Manzil" value=profile.address %}
+                    {% endif %}
+
+                    {% include "includes/_info_row.html" with icon="fa-calendar" label="Qo'shildi" value=user.date_joined|date:"d-F, Y-yil" %}
+                </div>
+
+                <a href="{% url 'accounts:logout' %}" class="btn-danger-custom mt-4"
+                    style="width:100%;justify-content:center;">
+                    <i class="fas fa-right-from-bracket"></i> Tizimdan chiqish
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block title %}O'quvchi qo'shish | {{ group.name }}{% endblock %}
+{% block page_title %}Guruhga o'quvchi qo'shish{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <div class="page-title">{{ group.name }}</div>
+        <div class="page-subtitle">{{ group.course.name }} · O'quvchi qo'shish</div>
+    </div>
+    <a href="{% url 'courses:group_detail' group.pk %}" class="btn-outline-custom"><i class="fas fa-arrow-left"></i>
+        Orqaga</a>
+</div>
+<div class="form-card">
+    <form method="POST">{% csrf_token %}
+        <div class="row g-3">
+            <div class="col-12"><label class="form-label-custom">O'quvchi <span class="required-star">*</span></label>{{ form.student }}</div>
+            <div class="col-md-6"><label class="form-label-custom">Chegirma (%)</label>{{ form.discount_percent }}</div>
+            <div class="col-md-6"><label class="form-label-custom">Izoh</label>{{ form.notes }}</div>
+        </div>
+        {% if form.errors %}
+        <div class="alert alert-danger mt-3" style="border-radius:10px;">
+            {% for f, e in form.errors.items %}
+                {% for err in e %}<div>{{ err }}</div>{% endfor %}
+            {% endfor %}
+        </div>
+        {% endif %}
+        <div class="d-flex gap-3 mt-4">
+            <button type="submit" class="btn-primary-custom"><i class="fas fa-user-plus"></i> Qo'shish</button>
+            <a href="{% url 'courses:group_detail' group.pk %}" class="btn-outline-custom">Bekor qilish</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

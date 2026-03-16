@@ -1,0 +1,303 @@
+{% extends 'base.html' %}
+{% load currency_tags %}
+{% block title %}Dashboard | O'quv Markaz{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- STAT CARDS -->
+<div class="row g-4 mb-4">
+    <div class="col-sm-6 col-xl-2-4">
+        <div class="stat-card" style="--after-color:var(--primary);">
+            <div class="stat-icon purple"><i class="fas fa-user-graduate"></i></div>
+            <div class="stat-value">{{ total_students }}</div>
+            <div class="stat-label">Faol O'quvchilar</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-2-4">
+        <div class="stat-card">
+            <div class="stat-icon blue"><i class="fas fa-users"></i></div>
+            <div class="stat-value">{{ total_groups }}</div>
+            <div class="stat-label">Faol Guruhlar</div>
+        </div>
+    </div>
+    {% if user.is_admin_role %}
+    <div class="col-sm-6 col-xl-2-4">
+        <div class="stat-card">
+            <div class="stat-icon green"><i class="fas fa-money-bill-wave"></i></div>
+            <div class="stat-value" style="font-size:20px;">{{ monthly_income|money_format }}</div>
+            <div class="stat-label">Oylik Tushum (so'm)</div>
+        </div>
+    </div>
+    {% endif %}
+    {% if user.is_admin_role %}
+    <div class="col-sm-6 col-xl-2-4">
+        <div class="stat-card">
+            <div class="stat-icon amber"><i class="fas fa-exclamation-triangle"></i></div>
+            <div class="stat-value">{{ debtor_count }}</div>
+            <div class="stat-label">Qarzdor O'quvchilar</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-2-4">
+        <div class="stat-card">
+            <div class="stat-icon red"><i class="fas fa-circle-xmark"></i></div>
+            <div class="stat-value" style="font-size:20px;">{{ total_debt|money_format }}</div>
+            <div class="stat-label">Umumiy Qarz (so'm)</div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    @media (min-width: 1200px) {
+        .col-xl-2-4 {
+            width: 20%;
+        }
+    }
+</style>
+
+<!-- CHART (Full Width) -->
+{% if user.is_admin_role %}
+<div class="row g-4 mb-4">
+    <div class="col-12">
+        <div class="card-custom">
+            <div class="card-header-custom">
+                <h5><i class="fas fa-chart-bar me-2" style="color:var(--primary);"></i>Oylik tushum (so'm)</h5>
+                <span style="font-size:12px;color:var(--text-muted);">Oxirgi 6 oy</span>
+            </div>
+            <div class="card-body-custom">
+                <div class="chart-wrapper" style="height: 300px;">
+                    <canvas id="incomeChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- ROW 1: FAOL GURUHLAR | TUG'ILGAN KUNI YAQUIN O'QUVCHILAR -->
+<div class="row g-4 mb-4">
+    <div class="col-lg-6">
+        <div class="card-custom h-100">
+            <div class="card-header-custom">
+                <h5><i class="fas fa-users me-2" style="color:var(--secondary);"></i>Faol Guruhlar</h5>
+                <a href="{% url 'courses:group_list' %}" style="font-size:12px;color:var(--primary);text-decoration:none;">Barchasi →</a>
+            </div>
+            <div class="card-body-custom" style="padding:0;">
+                <table class="table-custom">
+                    <tbody>
+                        {% for group in groups_with_counts %}
+                        <tr>
+                            <td style="width: 64px;">
+                                <div class="avatar-circle" style="background:var(--bg-main); color:var(--primary); border: 1px solid var(--border-subtle);">
+                                    {{ group.name|first }}
+                                </div>
+                            </td>
+                            <td>
+                                <div style="font-size:13px;font-weight:600;color:var(--text-heading);">{{ group.name }}</div>
+                                <div style="font-size:11px;color:var(--text-muted);">{{ group.course.name }}</div>
+                            </td>
+                            <td style="text-align:right;">
+                                <div style="font-size:13px;font-weight:700;color:var(--primary);">
+                                    {{ group.enrolled }}/{{ group.max_students }}
+                                </div>
+                                <div class="progress-custom mt-1" style="width:60px; margin-left: auto;">
+                                    <div class="progress-bar-custom"
+                                            style="width:{% if group.max_students %}{% widthratio group.enrolled group.max_students 100 %}{% else %}0{% endif %}%"></div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-center" style="padding:40px; color:var(--text-muted);">Guruhlar mavjud emas</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card-custom h-100">
+            <div class="card-header-custom">
+                <h5><i class="fas fa-birthday-cake me-2" style="color:var(--danger);"></i>Tug'ilgan kunlar</h5>
+            </div>
+            <div class="card-body-custom" style="padding:0;">
+                <table class="table-custom">
+                    <tbody>
+                        {% for st in upcoming_birthdays %}
+                        <tr>
+                            <td style="width: 64px;">
+                                <div class="avatar-circle">
+                                    {{ st.first_name|first }}
+                                </div>
+                            </td>
+                            <td>
+                                <div style="font-size:13px;font-weight:600;color:var(--text-heading);">{{ st.last_name }} {{ st.first_name }}</div>
+                                <div style="font-size:11px;color:var(--text-muted);">{{ st.birth_date|date:"d-F" }} · <span style="color:var(--primary);font-weight:500;">{{ st.role }}</span></div>
+                            </td>
+                            <td style="text-align:right;">
+                                {% if st.days_until_birthday == 0 %}
+                                <span class="badge-custom badge-paid">Bugun! 🎉</span>
+                                {% elif st.days_until_birthday == 1 %}
+                                <div style="font-size:12px;font-weight:600;color:var(--warning);">Ertaga</div>
+                                {% else %}
+                                <div style="font-size:12px;font-weight:500;color:var(--text-muted);">{{ st.days_until_birthday }} kundan keyin</div>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-center" style="padding:40px; color:var(--text-muted);">Yaqin orada tug'ilgan kunlar yo'q</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ROW 2: SO'NGGI TO'LOVLAR | QARZDORLAR -->
+<div class="row g-4 mb-4">
+    <div class="col-lg-6">
+        <div class="card-custom h-100">
+            <div class="card-header-custom">
+                <h5><i class="fas fa-receipt me-2" style="color:var(--success);"></i>So'nggi To'lovlar</h5>
+                <a href="{% url 'payments:list' %}" style="font-size:12px;color:var(--primary);text-decoration:none;">Barchasi →</a>
+            </div>
+            <div class="card-body-custom" style="padding:0;">
+                <table class="table-custom">
+                    <tbody>
+                        {% for p in recent_payments|slice:":5" %}
+                        <tr>
+                            <td style="width:64px;">
+                                <div class="avatar-circle">{{ p.student.first_name|first }}</div>
+                            </td>
+                            <td>
+                                <div style="font-size:13px;font-weight:600;color:var(--text-heading);">{{ p.student }}</div>
+                                <div style="font-size:11px;color:var(--text-muted);">{{ p.group.name }}</div>
+                            </td>
+                            <td style="text-align:right;">
+                                <div style="font-size:13px;font-weight:600;color:var(--dark);">{{ p.amount|money_format }}</div>
+                                <span class="badge-custom {% if p.status == 'paid' %}badge-paid{% elif p.status == 'unpaid' %}badge-unpaid{% else %}badge-partial{% endif %}" style="font-size:10px; padding:2px 8px;">
+                                    {{ p.get_status_display }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-center" style="padding:40px; color:var(--text-muted);">To'lovlar mavjud emas</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card-custom h-100">
+            <div class="card-header-custom">
+                <h5><i class="fas fa-user-clock me-2" style="color:var(--warning);"></i>Qarzdorlar</h5>
+                <a href="{% url 'payments:debtors' %}" style="font-size:12px;color:var(--primary);text-decoration:none;">Barchasi →</a>
+            </div>
+            <div class="card-body-custom" style="padding:0;">
+                <table class="table-custom">
+                    <tbody>
+                        {% for p in debtors_list %}
+                        <tr>
+                            <td style="width: 64px;">
+                                <div class="avatar-circle">
+                                    {{ p.student.first_name|first }}
+                                </div>
+                            </td>
+                            <td>
+                                <div style="font-size:13px;font-weight:600;color:var(--text-heading);">{{ p.student }}</div>
+                                <div style="font-size:11px;color:var(--text-muted);">{{ p.group.course.name }}</div>
+                            </td>
+                            <td style="text-align:right;">
+                                <div style="font-size:13px;font-weight:700;color:var(--danger);">
+                                    -{{ p.remaining|money_format }}
+                                </div>
+                                <div style="font-size:10px;color:var(--text-muted);">Qarz miqdori</div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-center" style="padding:40px; color:var(--text-muted);">Qarzdorlar yo'q</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let incomeChart;
+    function initChart() {
+        const isDark = document.body.classList.contains('dark');
+        const color = isDark ? '#ffffff' : '#000000';
+        const bgColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)';
+        const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)';
+
+        if (incomeChart) incomeChart.destroy();
+
+        const ctxEl = document.getElementById('incomeChart');
+        if (!ctxEl) return;
+        const ctx = ctxEl.getContext('2d');
+        
+        incomeChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: {{ chart_months| safe }},
+                datasets: [{
+                    label: "Tushum (so'm)",
+                    data: {{ chart_income| safe }},
+                    backgroundColor: bgColor,
+                    borderColor: color,
+                    borderWidth: 2,
+                    borderRadius: 8,
+                    borderSkipped: false,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: isDark ? '#1f2937' : '#ffffff',
+                        titleColor: isDark ? '#ffffff' : '#000000',
+                        bodyColor: isDark ? '#e2e8f0' : '#334155',
+                        borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+                        borderWidth: 1,
+                        callbacks: {
+                            label: ctx => ctx.parsed.y.toLocaleString() + " so'm"
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: gridColor },
+                        ticks: { 
+                            callback: v => v.toLocaleString(),
+                            color: isDark ? '#94a3b8' : '#64748b'
+                        }
+                    },
+                    x: { 
+                        grid: { display: false },
+                        ticks: { color: isDark ? '#94a3b8' : '#64748b' }
+                    }
+                }
+            }
+        });
+    }
+
+    initChart();
+    window.addEventListener('themeChanged', initChart);
+</script>
+{% endblock %}

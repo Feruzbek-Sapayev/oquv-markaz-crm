@@ -1,0 +1,230 @@
+{% extends 'base.html' %}
+{% block title %}O'quvchilar{% endblock %}
+{% block page_title %}O'quvchilar{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <div class="page-title">O'quvchilar ro'yxati</div>
+        <div class="page-subtitle">Barcha ro'yxatdan o'tgan o'quvchilar</div>
+    </div>
+    <div class="d-flex gap-2">
+        {% if user.is_admin_role %}
+        <a href="{% url 'students:export_excel' %}" class="btn-outline-custom" style="padding: 6px 14px; font-size: 13px;">
+            <i class="fas fa-file-excel me-1"></i> Excel
+        </a>
+        <a href="{% url 'students:create' %}" class="btn-primary-custom py-2 px-3">
+            <i class="fas fa-plus me-1"></i> Yangi O'quvchi
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.action-dropdown { position: relative; display: inline-block; }
+.action-dots-btn {
+    width: 34px; height: 34px; border: none;
+    background: rgba(99,102,241,0.08); border-radius: 8px;
+    color: var(--text-muted); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; transition: background 0.2s, color 0.2s;
+}
+.action-dots-btn:hover { background: rgba(99,102,241,0.18); color: var(--primary); }
+.action-menu {
+    display: none; position: absolute; right: 0; top: calc(100% + 6px);
+    background: var(--bg-card); border: 1px solid var(--border-subtle);
+    border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+    z-index: 9999; min-width: 160px; overflow: hidden;
+    animation: dropFadeIn 0.15s ease-out;
+}
+.action-menu.open { display: block; }
+@keyframes dropFadeIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.action-menu a, .action-menu button {
+    display: flex; align-items: center; gap: 10px;
+    width: 100%; padding: 10px 16px; font-size: 13px; font-weight: 500;
+    color: var(--text-heading); text-decoration: none;
+    background: none; border: none; cursor: pointer; text-align: left;
+    transition: background 0.15s;
+}
+.action-menu a:hover, .action-menu button:hover { background: rgba(99,102,241,0.07); }
+.action-menu a i, .action-menu button i { width: 16px; text-align: center; opacity: 0.7; }
+.action-menu .menu-danger { color: var(--danger) !important; }
+.action-menu .menu-danger i { color: var(--danger); }
+</style>
+
+<!-- Filters -->
+<div class="card-custom mb-4">
+    <div class="card-body-custom" style="padding:16px 22px;">
+        <form method="GET">
+            <div class="row g-3 align-items-center">
+                <div class="col-md-4">
+                    <div class="search-box w-100">
+                        <i class="fas fa-search" style="color:var(--text-muted);"></i>
+                        <input type="text" name="q" value="{{ query }}" placeholder="Ism, familiya, telefon...">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <select name="course" class="form-select" onchange="this.form.submit()">
+                        <option value="">Barcha kurslar</option>
+                        {% for c in courses %}
+                        <option value="{{ c.pk }}" {% if selected_course == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="group" class="form-select" onchange="this.form.submit()">
+                        <option value="">Barcha guruhlar</option>
+                        {% for g in groups %}
+                        <option value="{{ g.pk }}" {% if selected_group == g.pk|stringformat:"s" %}selected{% endif %}>{{ g.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="teacher" class="form-select" onchange="this.form.submit()">
+                        <option value="">Barcha ustozlar</option>
+                        {% for t in teachers %}
+                        <option value="{{ t.pk }}" {% if selected_teacher == t.pk|stringformat:"s" %}selected{% endif %}>{{ t.get_full_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="payment_status" class="form-select" onchange="this.form.submit()">
+                        <option value="">To'lov holati</option>
+                        {% for val, label in payment_statuses %}
+                        <option value="{{ val }}" {% if selected_payment_status == val %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <!-- Row 2 -->
+                <div class="col-md-2">
+                    <select name="status" class="form-select" onchange="this.form.submit()">
+                        <option value="">O'quvchi holati</option>
+                        {% for val, label in statuses %}
+                        <option value="{{ val }}" {% if status == val %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-10 d-flex gap-2">
+                    {% if query or status or selected_course or selected_group or selected_teacher or selected_payment_status %}
+                    <a href="{% url 'students:list' %}" class="btn-outline-custom"><i class="fas fa-times me-2"></i> Tozalash</a>
+                    {% endif %}
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card-custom">
+    <div class="card-header-custom">
+        <h5><i class="fas fa-user-graduate me-2" style="color:var(--primary);"></i>
+            Jami: <strong>{{ students.count }}</strong> ta o'quvchi
+        </h5>
+    </div>
+    <div style="overflow-x:auto;">
+        <table class="table-custom">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>O'quvchi</th>
+                    <th>Telefon</th>
+                    <th>Jins</th>
+                    <th>Holat</th>
+                    <th>Sana</th>
+                    <th style="text-align:right;">Amallar</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for st in students %}
+                <tr>
+                    <td style="color:var(--text-muted);font-size:12px;">{{ forloop.counter }}</td>
+                    <td>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            {% if st.photo %}
+                                <img src="{{ st.photo.url }}" class="avatar-img" style="width:36px; height:36px;">
+                            {% else %}
+                                <div class="avatar-circle">{{ st.first_name|first }}</div>
+                            {% endif %}
+                            <div>
+                                <a href="{% url 'students:detail' st.pk %}"
+                                    style="font-weight:600;color:var(--dark);text-decoration:none;">
+                                    {{ st.last_name }} {{ st.first_name }}
+                                </a>
+                                <span title="{{ st.lead_status.desc }}" style="cursor:help; font-size: 14px; margin-left: 4px;">{{ st.lead_status.icon }}</span>
+                                {% if st.middle_name %}<div style="font-size:11px;color:var(--text-muted);">{{ st.middle_name }}</div>{% endif %}
+                            </div>
+                        </div>
+                    </td>
+                    <td style="font-size:13px;">{{ st.phone }}</td>
+                    <td style="font-size:12px;color:var(--text-muted);">{{ st.get_gender_display }}</td>
+                    <td>
+                        <span
+                            class="badge-custom {% if st.status == 'active' %}badge-active{% elif st.status == 'inactive' %}badge-inactive{% else %}badge-paid{% endif %}">
+                            {{ st.get_status_display }}
+                        </span>
+                    </td>
+                    <td style="font-size:12px;color:var(--text-muted);">{{ st.registered_at }}</td>
+                    <td style="text-align:right;">
+                        <div class="action-dropdown">
+                            <button class="action-dots-btn" onclick="toggleMenu(event, 'smenu-{{ st.pk }}')">
+                                <i class="fas fa-ellipsis-vertical"></i>
+                            </button>
+                            <div id="smenu-{{ st.pk }}" class="action-menu">
+                                {% if user.is_admin_role %}
+                                <a href="{% url 'students:edit' st.pk %}">
+                                    <i class="fas fa-edit"></i> Tahrirlash
+                                </a>
+                                <button class="menu-danger"
+                                    onclick="openDeleteModal('{% url 'students:delete' st.pk %}', '{{ st.last_name }} {{ st.first_name }}')">
+                                    <i class="fas fa-trash"></i> O'chirish
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7">
+                        <div class="empty-state">
+                            <div class="empty-icon">🎓</div>
+                            <h4>O'quvchilar topilmadi</h4>
+                            <p>Yangi o'quvchi qo'shing yoki qidiruvni o'zgartiring</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Pagination -->
+{% include 'includes/_pagination.html' %}
+
+<script>
+function toggleMenu(event, menuId) {
+    event.stopPropagation();
+    document.querySelectorAll('.action-menu.open').forEach(m => {
+        if (m.id !== menuId) m.classList.remove('open');
+    });
+    document.getElementById(menuId).classList.toggle('open');
+}
+function openDeleteModal(url, name) {
+    document.querySelectorAll('.action-menu.open').forEach(m => m.classList.remove('open'));
+    const modal = document.getElementById('deleteConfirmModal');
+    if (modal) {
+        const form = modal.querySelector('form');
+        if (form) form.action = url;
+        const nameEl = modal.querySelector('[data-name-display]');
+        if (nameEl) nameEl.textContent = name;
+        new bootstrap.Modal(modal).show();
+    }
+}
+document.addEventListener('click', function() {
+    document.querySelectorAll('.action-menu.open').forEach(m => m.classList.remove('open'));
+});
+</script>
+{% endblock %}

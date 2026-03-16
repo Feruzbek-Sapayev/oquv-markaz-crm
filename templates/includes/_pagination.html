@@ -1,0 +1,64 @@
+{% if page_obj.has_other_pages or page_obj.paginator.count > 20 %}
+<div style="display:flex; flex-direction:column; align-items:center; gap:16px; margin-top:24px; padding:16px 0;">
+    <div style="display:flex; justify-content:center; align-items:center; gap:12px; flex-wrap:wrap;">
+        <!-- Page Size Selector -->
+        <div style="display:flex; align-items:center; gap:8px; background:var(--bg-card); padding:4px 12px; border-radius:10px; border:1px solid var(--border-subtle);">
+            <span style="font-size:12px; color:var(--text-muted); font-weight:600;">Ko'rsatish:</span>
+            <select onchange="changePageSize(this.value)" style="background:transparent; border:none; color:var(--text-heading); font-size:12px; font-weight:700; cursor:pointer; outline:none; padding:2px 4px;">
+                <option value="20" {% if page_obj.paginator.per_page == 20 %}selected{% endif %}>20</option>
+                <option value="50" {% if page_obj.paginator.per_page == 50 %}selected{% endif %}>50</option>
+                <option value="100" {% if page_obj.paginator.per_page == 100 %}selected{% endif %}>100</option>
+                <option value="200" {% if page_obj.paginator.per_page == 200 %}selected{% endif %}>200</option>
+            </select>
+        </div>
+
+        <nav style="display:flex; align-items:center; gap:6px;">
+            {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}"
+                class="btn-outline-custom" style="padding:6px 12px; font-size:12px;">
+                <i class="fas fa-chevron-left"></i>
+            </a>
+            {% else %}
+            <span class="btn-outline-custom" style="padding:6px 12px; font-size:12px; opacity:0.4; cursor:not-allowed; pointer-events:none;">
+                <i class="fas fa-chevron-left"></i>
+            </span>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                <span class="btn-primary-custom" style="padding:6px 14px; font-size:13px; cursor:default;">{{ num }}</span>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <a href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}"
+                    class="btn-outline-custom" style="padding:6px 14px; font-size:13px;">{{ num }}</a>
+                {% elif num == page_obj.number|add:'-3' or num == page_obj.number|add:'3' %}
+                <span style="color:var(--text-muted); font-size:12px;">…</span>
+                {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}"
+                class="btn-outline-custom" style="padding:6px 12px; font-size:12px;">
+                <i class="fas fa-chevron-right"></i>
+            </a>
+            {% else %}
+            <span class="btn-outline-custom" style="padding:6px 12px; font-size:12px; opacity:0.4; cursor:not-allowed; pointer-events:none;">
+                <i class="fas fa-chevron-right"></i>
+            </span>
+            {% endif %}
+        </nav>
+    </div>
+
+    <div style="text-align:center; font-size:12px; color:var(--text-muted);">
+        {{ page_obj.paginator.count }} ta yozuvdan {{ page_obj.start_index }}-{{ page_obj.end_index }} ko'rsatilmoqda
+    </div>
+</div>
+
+<script>
+function changePageSize(size) {
+    const url = new URL(window.location.href);
+    url.searchParams.set('page_size', size);
+    url.searchParams.set('page', '1'); // Reset to first page when changing size
+    window.location.href = url.toString();
+}
+</script>
+{% endif %}

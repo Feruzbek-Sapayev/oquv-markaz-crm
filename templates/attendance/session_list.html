@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Davomat{% endblock %}
+{% block page_title %}Davomat{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/session_list.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="group-filter-panel">
+    <form method="GET" id="matrixFilterForm" class="m-0">
+        <div class="group-select-container">
+            <i class="fas fa-users-viewfinder"></i>
+            <select name="group" class="form-select shadow-none" onchange="this.form.submit()">
+                <option value="">Guruh tanlang...</option>
+                {% for g in groups %}
+                <option value="{{ g.pk }}" {% if selected_group == g.pk|stringformat:'s' %}selected{% endif %}>
+                    {{ g.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+    </form>
+
+    <a href="{% url 'attendance:export_attendance_excel' %}?group={{ selected_group }}&month={{ current_month }}&year={{ current_year }}" 
+       class="btn-outline-custom" style="padding: 6px 14px; font-size: 13px;">
+        <i class="fas fa-file-excel"></i> Excel
+    </a>
+</div>
+
+{% if selected_group_obj %}
+<div class="matrix-card">
+    <div class="matrix-header">
+        <div class="matrix-stats">
+            <div class="stat-item">
+                <span class="stat-label">Jami Bor</span>
+                <span class="stat-value present">{{ stats.present }}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Jami Yo'q</span>
+                <span class="stat-value absent">{{ stats.absent }}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Jami Foiz</span>
+                <span class="stat-value percent">{{ stats.percent }}%</span>
+            </div>
+        </div>
+
+        <div class="nav-arrows">
+            <form method="GET" class="d-flex align-items-center me-2">
+                <input type="hidden" name="group" value="{{ selected_group }}">
+                <div class="custom-date-selector">
+                    <i class="far fa-calendar-alt"></i>
+                    <select name="month_year" class="form-select date-select" onchange="this.form.submit()">
+                        {% for m_id, m_name in full_uz_months %}
+                            <option value="{{ m_id }}-{{ current_year }}" {% if m_id == current_month %}selected{% endif %}>
+                                {{ m_name }} {{ current_year }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </form>
+            <div class="d-flex gap-2">
+                <a href="?group={{ selected_group }}&month={{ prev_month }}&year={{ prev_year }}" class="nav-btn" title="Oldingi oy">
+                    <i class="fas fa-chevron-left"></i>
+                </a>
+                <a href="?group={{ selected_group }}&month={{ next_month }}&year={{ next_year }}" class="nav-btn" title="Keyingi oy">
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <table class="table-matrix">
+            <thead>
+                <tr>
+                    <th class="is-col">F.I.SH</th>
+                    {% for d in all_dates %}
+                    <th class="{% if d == today %}header-today{% endif %} text-center">
+                        <div style="opacity: 0.6; font-size: 10px; margin-bottom: 2px;">
+                            {% if d.weekday == 0 %}DU{% elif d.weekday == 1 %}SE{% elif d.weekday == 2 %}CH
+                            {% elif d.weekday == 3 %}PA{% elif d.weekday == 4 %}JU{% elif d.weekday == 5 %}SH
+                            {% else %}YA{% endif %}
+                        </div>
+                        <div style="font-size: 16px;">{{ d.day }}</div>
+                    </th>
+                    {% endfor %}
+                    <th class="pct-col text-center">Davomat %</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in matrix_data %}
+                <tr>
+                    <td class="is-col">
+                        <span class="student-name-text">{{ row.student }}</span>
+                    </td>
+                    {% for item in row.attendances %}
+                    <td class="attendance-cell {% if item.date > today %}future-date{% endif %} {% if item.date == today %}is-today{% endif %} text-center"
+                        data-student="{{ row.student.pk }}" 
+                        data-date="{{ item.date|date:'Y-m-d' }}" 
+                        data-status="{{ item.status|default:'' }}"
+                        data-group="{{ selected_group }}">
+                        <div class="att-status-circle {% if item.status == 'present' %}att-present{% elif item.status == 'absent' %}att-absent{% else %}att-empty{% endif %}">
+                            {% if item.status == 'present' %}
+                                <i class="fas fa-check"></i>
+                            {% elif item.status == 'absent' %}
+                                <i class="fas fa-times"></i>
+                            {% endif %}
+                        </div>
+                    </td>
+                    {% endfor %}
+                    <td class="pct-col text-center">
+                        <span class="percent-value-text">{{ row.percentage }}%</span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<script>
+    window.attendanceConfig = {
+        isStudent: {% if user.is_student %}true{% else %}false{% endif %},
+        updateUrl: '{% url "attendance:attendance_update_ajax" %}',
+        csrfToken: '{{ csrf_token }}'
+    };
+</script>
+<script src="{% static 'js/session_list.js' %}"></script>
+{% endblock %}

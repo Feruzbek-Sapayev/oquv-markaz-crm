@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Davomat yozish | {{ group.name }}{% endblock %}
+{% block page_title %}Davomat yozish{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/session_create.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <div class="page-title h4 mb-1">{{ group.name }}</div>
+        <div class="page-subtitle text-muted">{{ group.course.name }} · Davomat belgilash</div>
+    </div>
+    <a href="{% url 'attendance:session_list' %}?group={{ group.pk }}" class="btn-outline-custom">
+        <i class="fas fa-arrow-left me-1"></i> Orqaga
+    </a>
+</div>
+
+<div class="card-custom">
+    <div class="card-body-custom p-4">
+        <form method="POST">{% csrf_token %}
+            <div class="row g-4 mb-5">
+                <div class="col-md-4">
+                    <label class="form-label-custom">Sana <span class="required-star">*</span></label>
+                    <input type="date" name="date" value="{{ today }}" class="form-control" required>
+                </div>
+                <div class="col-md-8">
+                    <label class="form-label-custom">Mavzu (ixtiyoriy)</label>
+                    <input type="text" name="topic" class="form-control" placeholder="Bugungi dars mavzusi...">
+                </div>
+            </div>
+
+            <div class="d-flex align-items-center justify-content-between mb-4">
+                <h5 class="fw-bold mb-0" style="color: var(--text-heading); font-size: 16px;">O'quvchilar ro'yxati</h5>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-sm btn-light py-2 px-3" onclick="setAll('present')" style="border-radius: 10px; font-weight: 600;">✓ Hamma keldi</button>
+                    <button type="button" class="btn btn-sm btn-light py-2 px-3" onclick="setAll('absent')" style="border-radius: 10px; font-weight: 600;">✗ Hamma kelmadi</button>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table-custom">
+                    <thead>
+                        <tr>
+                            <th class="ps-3">O'quvchi</th>
+                            <th>Telefon</th>
+                            <th class="text-center">Bor</th>
+                            <th class="text-center">Yo'q</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for e in students %}
+                        <tr class="student-row" id="row-{{ e.student.pk }}">
+                            <td class="ps-3">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="avatar-circle" style="width:34px; height:34px; font-size:12px;">
+                                        {{ e.student.first_name|first }}
+                                    </div>
+                                    <span style="font-weight:600; color: var(--text-heading);">{{ e.student }}</span>
+                                </div>
+                            </td>
+                            <td class="text-muted small">{{ e.student.phone }}</td>
+                            <td class="text-center">
+                                <label>
+                                    <input type="radio" name="status_{{ e.student.pk }}" value="present" class="status-radio" checked>
+                                    <div class="status-box present"><i class="fas fa-check"></i></div>
+                                </label>
+                            </td>
+                            <td class="text-center">
+                                <label>
+                                    <input type="radio" name="status_{{ e.student.pk }}" value="absent" class="status-radio">
+                                    <div class="status-box absent"><i class="fas fa-times"></i></div>
+                                </label>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center py-5">
+                                <div class="text-muted">Guruhda o'quvchilar yo'q</div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="mt-5 d-flex gap-3">
+                <button type="submit" class="btn-primary-custom px-5">
+                    Saqlash
+                </button>
+                <a href="{% url 'attendance:session_list' %}?group={{ group.pk }}" class="btn-outline-custom px-5">
+                    Bekor qilish
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="{% static 'js/session_create.js' %}"></script>
+{% endblock %}

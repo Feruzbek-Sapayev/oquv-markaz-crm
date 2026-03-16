@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div class="page-title">{{ title }}</div>
+    <a href="{% url 'accounts:user_list' %}" class="btn-outline-custom"><i class="fas fa-arrow-left"></i> Orqaga</a>
+</div>
+<div class="form-card">
+    <form method="POST" enctype="multipart/form-data">{% csrf_token %}
+        <div class="row g-3">
+            <div class="col-md-6"><label class="form-label-custom">Username <span class="required-star">*</span></label>{{ form.username }}</div>
+            <div class="col-md-6"><label class="form-label-custom">Rol <span class="required-star">*</span></label>{{ form.role }}</div>
+            <div class="col-md-6"><label class="form-label-custom">Ism</label>{{ form.first_name }}</div>
+            <div class="col-md-6"><label class="form-label-custom">Familiya</label>{{ form.last_name }}</div>
+            <div class="col-md-6"><label class="form-label-custom">Email</label>{{ form.email }}</div>
+            <div class="col-md-6"><label class="form-label-custom">Telefon</label>{{ form.phone }}</div>
+            <div class="col-md-6"><label class="form-label-custom">Parol</label>{{ form.password1 }}</div>
+            <div class="col-md-6"><label class="form-label-custom">Parolni tasdiqlang</label>{{ form.password2 }}</div>
+            <div class="col-md-6"><label class="form-label-custom">Avatar</label>{{ form.avatar }}</div>
+            <div class="col-md-6 d-flex align-items-end gap-2 pb-2">{{ form.is_active }}<label>Faol
+                    foydalanuvchi</label></div>
+        </div>
+        {% if form.errors %}
+        <div class="alert alert-danger mt-3" style="border-radius:10px;">
+            {% for f, e in form.errors.items %}
+                {% for err in e %}<div>{{ err }}</div>{% endfor %}
+            {% endfor %}
+        </div>
+        {% endif %}
+        <div class="d-flex gap-3 mt-4">
+            <button type="submit" class="btn-primary-custom"><i class="fas fa-save"></i> Saqlash</button>
+            <a href="{% url 'accounts:user_list' %}" class="btn-outline-custom">Bekor qilish</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

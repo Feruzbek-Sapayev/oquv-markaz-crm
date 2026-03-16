@@ -1,0 +1,181 @@
+{% extends 'base.html' %}
+{% load currency_tags %}
+{% block title %}O'qituvchilar{% endblock %}
+{% block page_title %}O'qituvchilar{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <div class="page-title">O'qituvchilar ro'yxati</div>
+        <div class="page-subtitle">Barcha o'qituvchilar</div>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'teachers:create' %}" class="btn-primary-custom">
+            <i class="fas fa-plus"></i> Yangi O'qituvchi
+        </a>
+    </div>
+</div>
+
+<style>
+.action-dropdown { position: relative; display: inline-block; }
+.action-dots-btn {
+    width: 34px; height: 34px; border: none;
+    background: rgba(99,102,241,0.08); border-radius: 8px;
+    color: var(--text-muted); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; transition: background 0.2s, color 0.2s;
+}
+.action-dots-btn:hover { background: rgba(99,102,241,0.18); color: var(--primary); }
+.action-menu {
+    display: none; position: absolute; right: 0; top: calc(100% + 6px);
+    background: var(--bg-card); border: 1px solid var(--border-subtle);
+    border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+    z-index: 9999; min-width: 160px; overflow: hidden;
+    animation: dropFadeIn 0.15s ease-out;
+}
+.action-menu.open { display: block; }
+@keyframes dropFadeIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.action-menu a, .action-menu button {
+    display: flex; align-items: center; gap: 10px;
+    width: 100%; padding: 10px 16px; font-size: 13px; font-weight: 500;
+    color: var(--text-heading); text-decoration: none;
+    background: none; border: none; cursor: pointer; text-align: left;
+    transition: background 0.15s;
+}
+.action-menu a:hover, .action-menu button:hover { background: rgba(99,102,241,0.07); }
+.action-menu a i, .action-menu button i { width: 16px; text-align: center; opacity: 0.7; }
+.action-menu .menu-danger { color: var(--danger) !important; }
+.action-menu .menu-danger i { color: var(--danger); }
+</style>
+
+<!-- Filters -->
+<div class="card-custom mb-4">
+    <div class="card-body-custom" style="padding:16px 22px;">
+        <form method="GET" class="d-flex flex-wrap gap-3 align-items-center">
+            <div class="search-box" style="flex:1;min-width:220px;">
+                <i class="fas fa-search" style="color:var(--text-muted);"></i>
+                <input type="text" name="q" value="{{ query }}" placeholder="Ism, familiya, telefon, email...">
+            </div>
+            <select name="status" class="form-select" style="width:auto;">
+                <option value="">Barcha holat</option>
+                {% for val, label in statuses %}
+                <option value="{{ val }}" {% if status == val %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn-primary-custom">Qidirish</button>
+            {% if query or status %}
+            <a href="{% url 'teachers:list' %}" class="btn-outline-custom">Tozalash</a>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+<div class="card-custom">
+    <div class="card-header-custom">
+        <h5><i class="fas fa-chalkboard-teacher me-2" style="color:var(--primary);"></i>
+            Jami: <strong>{{ teachers.count }}</strong> ta o'qituvchi
+        </h5>
+    </div>
+    <div style="overflow-x:auto;">
+        <table class="table-custom">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>O'qituvchi</th>
+                    <th>Telefon</th>
+                    <th>Jins</th>
+                    <th>Holat</th>
+                    <th style="text-align:right;">Amallar</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in teachers %}
+                <tr>
+                    <td style="color:var(--text-muted);font-size:12px;">{{ forloop.counter }}</td>
+                    <td>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            {% if t.photo %}
+                                <img src="{{ t.photo.url }}" class="avatar-img" style="width:36px; height:36px;">
+                            {% else %}
+                                <div class="avatar-circle">{{ t.first_name|first }}</div>
+                            {% endif %}
+                            <div>
+                                <a href="{% url 'teachers:detail' t.pk %}"
+                                    style="font-weight:600;color:var(--dark);text-decoration:none;">
+                                    {{ t.last_name }} {{ t.first_name }}
+                                </a>
+                                {% if t.middle_name %}<div style="font-size:11px;color:var(--text-muted);">{{ t.middle_name }}</div>{% endif %}
+                            </div>
+                        </div>
+                    </td>
+                    <td style="font-size:13px;">{{ t.phone }}</td>
+                    <td style="font-size:12px;color:var(--text-muted);">{{ t.get_gender_display }}</td>
+                    <td>
+                        <span
+                            class="badge-custom {% if t.status == 'active' %}badge-active{% else %}badge-inactive{% endif %}">
+                            {{ t.get_status_display }}
+                        </span>
+                    </td>
+                    <td style="text-align:right;">
+                        <div class="action-dropdown">
+                            <button class="action-dots-btn" onclick="toggleMenu(event, 'tmenu-{{ t.pk }}')">
+                                <i class="fas fa-ellipsis-vertical"></i>
+                            </button>
+                            <div id="tmenu-{{ t.pk }}" class="action-menu">
+                                <a href="{% url 'teachers:edit' t.pk %}">
+                                    <i class="fas fa-edit" style="color:var(--secondary);"></i> Tahrirlash
+                                </a>
+                                <button class="menu-danger"
+                                    onclick="openDeleteModal('{% url 'teachers:delete' t.pk %}', '{{ t.last_name }} {{ t.first_name }}')">
+                                    <i class="fas fa-trash"></i> O'chirish
+                                </button>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7">
+                        <div class="empty-state">
+                            <div class="empty-icon">👨‍🏫</div>
+                            <h4>O'qituvchilar topilmadi</h4>
+                            <p>Yangi o'qituvchi qo'shing yoki qidiruvni o'zgartiring</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Pagination -->
+{% include 'includes/_pagination.html' %}
+
+<script>
+function toggleMenu(event, menuId) {
+    event.stopPropagation();
+    document.querySelectorAll('.action-menu.open').forEach(m => {
+        if (m.id !== menuId) m.classList.remove('open');
+    });
+    document.getElementById(menuId).classList.toggle('open');
+}
+function openDeleteModal(url, name) {
+    document.querySelectorAll('.action-menu.open').forEach(m => m.classList.remove('open'));
+    const modal = document.getElementById('deleteConfirmModal');
+    if (modal) {
+        const form = modal.querySelector('form');
+        if (form) form.action = url;
+        const nameEl = modal.querySelector('[data-name-display]');
+        if (nameEl) nameEl.textContent = name;
+        new bootstrap.Modal(modal).show();
+    }
+}
+document.addEventListener('click', function() {
+    document.querySelectorAll('.action-menu.open').forEach(m => m.classList.remove('open'));
+});
+</script>
+{% endblock %}

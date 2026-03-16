@@ -1,0 +1,29 @@
+.status-box {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition);
+    border: 2px solid var(--border-subtle);
+    background: var(--bg-input);
+    opacity: 0.6;
+    font-size: 14px;
+    color: var(--text-muted);
+}
+.status-radio:checked + .status-box {
+    opacity: 1;
+    transform: scale(1.1);
+    color: white;
+    border-color: transparent;
+}
+.status-radio:checked + .status-box.present { background: #10b981; }
+.status-radio:checked + .status-box.absent { background: #ef4444; }
+
+.status-radio { display: none; }
+
+.student-row:hover {
+    background: var(--bg-hover);
+}

@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+{% block title %}Foydalanuvchilar{% endblock %}
+{% block page_title %}Foydalanuvchilar{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div class="page-title">Tizim foydalanuvchilari</div>
+    {% if user.is_superadmin %}
+    <a href="{% url 'accounts:user_create' %}" class="btn-primary-custom"><i class="fas fa-plus"></i> Yangi
+        foydalanuvchi</a>
+    {% endif %}
+</div>
+<div class="card-custom">
+    <div style="overflow-x:auto;">
+        <table class="table-custom">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Foydalanuvchi</th>
+                    <th>Email</th>
+                    <th>Telefon</th>
+                    <th>Rol</th>
+                    <th>Holat</th>
+                    <th style="text-align:right;">Amallar</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in users %}
+                <tr>
+                    <td style="color:var(--text-muted);font-size:12px;">{{ forloop.counter }}</td>
+                    <td>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <div class="avatar-circle" style="overflow:hidden; display:flex; align-items:center; justify-content:center;">
+                                {% if u.get_avatar_url %}
+                                    <img src="{{ u.get_avatar_url }}" style="width:100%; height:100%; object-fit:cover;">
+                                {% else %}
+                                    {{ u.username|first|upper }}
+                                {% endif %}
+                            </div>
+                            <div>
+                                <div style="font-weight:600;color:var(--dark);">{{ u.get_full_name|default:u.username }}
+                                </div>
+                                <div style="font-size:11px;color:var(--text-muted);">@{{ u.username }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td style="font-size:13px;">{{ u.email|default:"—" }}</td>
+                    <td style="font-size:13px;">{{ u.phone|default:"—" }}</td>
+                    <td>
+                        <span class="badge-custom
+              {% if u.role == 'superadmin' %}badge-unpaid
+              {% elif u.role == 'admin' %}badge-partial
+              {% elif u.role == 'teacher' %}badge-paid
+              {% else %}badge-inactive{% endif %}">
+                            {{ u.get_role_display }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge-custom {% if u.is_active %}badge-active{% else %}badge-inactive{% endif %}">
+                            {% if u.is_active %}Faol{% else %}Nofaol{% endif %}
+                        </span>
+                    </td>
+                    <td style="text-align:right;">
+                        {% if user.is_superadmin %}
+                        <div class="d-flex gap-1 justify-content-end">
+                            <a href="{% url 'accounts:user_edit' u.pk %}" class="btn btn-sm"
+                                style="background:rgba(99,102,241,0.1);color:var(--primary);border-radius:6px;"><i
+                                    class="fas fa-edit"></i></a>
+                            {% if u.pk != user.pk %}
+                            <a href="#" class="btn btn-sm"
+                                style="background:rgba(239,68,68,0.1);color:var(--danger);border-radius:6px;"
+                                data-bs-toggle="modal"
+                                data-bs-target="#deleteConfirmModal"
+                                data-url="{% url 'accounts:user_delete' u.pk %}"
+                                data-name="{{ u.username }}">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Pagination -->
+{% include 'includes/_pagination.html' %}
+{% endblock %}

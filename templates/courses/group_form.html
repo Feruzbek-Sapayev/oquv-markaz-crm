@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div class="page-title">{{ title }}</div>
+    <a href="{% url 'courses:group_list' %}" class="btn-outline-custom"><i class="fas fa-arrow-left"></i> Orqaga</a>
+</div>
+<div class="form-card">
+    <form method="POST">{% csrf_token %}
+        <div class="row g-3 mb-4">
+            <div class="col-md-6"><label class="form-label-custom">Guruh nomi <span class="required-star">*</span></label>{{ form.name }}</div>
+            <div class="col-md-6"><label class="form-label-custom">Kurs <span class="required-star">*</span></label>{{ form.course }}</div>
+
+            <div class="col-md-6"><label class="form-label-custom">Boshlanish vaqti</label>{{ form.start_time }}</div>
+            <div class="col-md-6"><label class="form-label-custom">Tugash vaqti</label>{{ form.end_time }}</div>
+            <div class="col-md-6"><label class="form-label-custom">Dars kunlari</label>{{ form.days }}</div>
+            <div class="col-md-6"><label class="form-label-custom">Max o'quvchi</label>{{ form.max_students }}</div>
+            <div class="col-md-6"><label class="form-label-custom">Boshlash sanasi</label>{{ form.start_date }}</div>
+            <div class="col-md-6"><label class="form-label-custom">Tugash sanasi</label>{{ form.end_date }}</div>
+            <div class="col-md-6"><label class="form-label-custom">Xona</label>{{ form.room }}</div>
+            <div class="col-md-6 d-flex align-items-end gap-2 pb-2">
+                {{ form.is_active }}
+                <label class="form-check-label">Faol guruh</label>
+            </div>
+        </div>
+
+        <!-- O'qituvchi va Maosh -->
+        
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label-custom">O'qituvchi <span class="required-star">*</span></label>
+                {{ form.teacher }}
+            </div>
+            <div class="col-md-4">
+                <label class="form-label-custom">Maosh turi</label>
+                {{ form.salary_type }}
+            </div>
+            <div class="col-md-4 salary-field-container">
+                <div id="fixed-salary-wrapper" style="display:none;">
+                    <label class="form-label-custom">Oylik maosh (summa)</label>
+                    {{ form.salary_monthly }}
+                </div>
+                <div id="percent-salary-wrapper" style="display:none;">
+                    <label class="form-label-custom">Maosh foizi (%)</label>
+                    {{ form.salary_percentage }}
+                </div>
+            </div>
+        </div>
+
+        {% if form.errors %}
+        <div class="alert alert-danger mt-4" style="border-radius:10px;">
+            {% for f, e in form.errors.items %}
+                {% for err in e %}<div>{{ f }}: {{ err }}</div>{% endfor %}
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="d-flex gap-3 mt-4">
+            <button type="submit" class="btn-primary-custom"><i class="fas fa-save"></i> Saqlash</button>
+            <a href="{% url 'courses:group_list' %}" class="btn-outline-custom">Bekor qilish</a>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const typeSelect = document.getElementById('id_salary_type');
+    const fixedDiv = document.getElementById('fixed-salary-wrapper');
+    const percentDiv = document.getElementById('percent-salary-wrapper');
+    
+    function toggleSalaryFields() {
+        if (typeSelect.value === 'fixed') {
+            fixedDiv.style.display = 'block';
+            percentDiv.style.display = 'none';
+        } else {
+            fixedDiv.style.display = 'none';
+            percentDiv.style.display = 'block';
+        }
+    }
+    
+    if (typeSelect) {
+        typeSelect.addEventListener('change', toggleSalaryFields);
+        toggleSalaryFields(); // Initial call
+    }
+});
+</script>
+{% endblock %}

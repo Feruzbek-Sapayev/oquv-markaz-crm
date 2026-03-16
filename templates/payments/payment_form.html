@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div class="page-title">{{ title }}</div>
+    <a href="{% url 'payments:list' %}" class="btn-outline-custom"><i class="fas fa-arrow-left"></i> Orqaga</a>
+</div>
+<div class="form-card">
+    <form method="POST">{% csrf_token %}
+        <div class="row g-3">
+            <div class="col-md-6"><label class="form-label-custom">O'quvchi <span class="required-star">*</span></label>{{ form.student }}</div>
+            <div class="col-md-6"><label class="form-label-custom">Guruh <span class="required-star">*</span></label>{{ form.group }}</div>
+            <div class="col-md-6"><label class="form-label-custom">To'lov miqdori (so'm) <span class="required-star">*</span></label>{{ form.amount }}
+            </div>
+            <div class="col-md-6"><label class="form-label-custom">To'lov usuli</label>{{ form.method }}</div>
+            <div class="col-md-3"><label class="form-label-custom">Oy <span class="required-star">*</span></label>{{ form.month }}</div>
+            <div class="col-md-3"><label class="form-label-custom">Yil <span class="required-star">*</span></label>{{ form.year }}</div>
+            <div class="col-md-3"><label class="form-label-custom">To'langan sana</label>{{ form.paid_at }}</div>
+            <div class="col-md-3"><label class="form-label-custom">Muddati</label>{{ form.due_date }}</div>
+            <div class="col-12"><label class="form-label-custom">Izoh</label>{{ form.notes }}</div>
+        </div>
+        {% if form.errors %}
+        <div class="alert alert-danger mt-3" style="border-radius:10px;">
+            {% for f, e in form.errors.items %}
+                {% for err in e %}<div>{{ err }}</div>{% endfor %}
+            {% endfor %}
+        </div>
+        {% endif %}
+        <div class="d-flex gap-3 mt-4">
+            <button type="submit" class="btn-primary-custom"><i class="fas fa-save"></i> Saqlash</button>
+            <a href="{% url 'payments:list' %}" class="btn-outline-custom">Bekor qilish</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

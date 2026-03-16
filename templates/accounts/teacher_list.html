@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% block title %}O'qituvchilar{% endblock %}
+{% block page_title %}O'qituvchilar{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div class="page-title">O'qituvchilar ro'yxati</div>
+    {% if user.is_superadmin %}
+    <a href="{% url 'accounts:user_create' %}" class="btn-primary-custom"><i class="fas fa-plus"></i> Yangi
+        foydalanuvchi</a>
+    {% endif %}
+</div>
+<div class="card-custom">
+    <div style="overflow-x:auto;">
+        <table class="table-custom">
+            <thead>
+                <tr>
+                    <th>O'qituvchi</th>
+                    <th>Email</th>
+                    <th>Telefon</th>
+                    <th>Guruhlar</th>
+                    <th>Holat</th>
+                    <th style="text-align:right;">Amallar</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in teachers %}
+                <tr>
+                    <td>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <div class="avatar-circle">{{ t.username|first|upper }}</div>
+                            <div>
+                                <div style="font-weight:600;color:var(--dark);">{{ t.get_full_name|default:t.username }}
+                                </div>
+                                <div style="font-size:11px;color:var(--text-muted);">@{{ t.username }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td style="font-size:13px;">{{ t.email|default:"—" }}</td>
+                    <td style="font-size:13px;">{{ t.phone|default:"—" }}</td>
+                    <td style="font-size:13px;">{{ t.group_count }}</td>
+                    <td>
+                        <span class="badge-custom {% if t.is_active %}badge-active{% else %}badge-inactive{% endif %}">
+                            {% if t.is_active %}Faol{% else %}Nofaol{% endif %}
+                        </span>
+                    </td>
+                    <td style="text-align:right;">
+                        {% if user.is_superadmin %}
+                        <div class="d-flex gap-1 justify-content-end">
+                            <a href="{% url 'accounts:user_edit' t.pk %}" class="btn btn-sm"
+                                style="background:rgba(99,102,241,0.1);color:var(--primary);border-radius:6px;"><i
+                                    class="fas fa-edit"></i></a>
+                            <a href="{% url 'accounts:user_delete' t.pk %}" class="btn btn-sm"
+                                style="background:rgba(239,68,68,0.1);color:var(--danger);border-radius:6px;"><i
+                                    class="fas fa-trash"></i></a>
+                        </div>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6">
+                        <div class="empty-state">
+                            <div class="empty-icon">👨‍🏫</div>
+                            <h4>O'qituvchilar mavjud emas</h4>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% block title %}Davomat tafsiloti{% endblock %}
+{% block page_title %}Davomat tafsiloti{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div style="display:flex;align-items:center;gap:10px;">
+        <a href="{% url 'attendance:session_list' %}" class="btn-outline-custom" title="Orqaga">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+        <div>
+            <div class="page-title">{{ session.date }} — {{ session.group.name }}</div>
+            <div class="page-subtitle">{{ session.topic|default:"Mavzu ko'rsatilmagan" }}</div>
+        </div>
+    </div>
+    <div class="d-flex gap-2">
+        <form method="POST" action="{% url 'attendance:session_delete' session.pk %}"
+            onsubmit="return confirm('Sessiya o\'chirilsinmi?');">
+            {% csrf_token %}
+            <button type="submit" class="btn-danger-custom"><i class="fas fa-trash"></i></button>
+        </form>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon green"><i class="fas fa-check"></i></div>
+            <div class="stat-value">{{ present_count }}</div>
+            <div class="stat-label">Keldi</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon red"><i class="fas fa-times"></i></div>
+            <div class="stat-value">{{ total_count }}</div>
+            <div class="stat-label">Jami o'quvchi</div>
+        </div>
+    </div>
+</div>
+
+<div class="card-custom">
+    <div style="overflow-x:auto;">
+        <table class="table-custom">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>O'quvchi</th>
+                    <th>Holat</th>
+                    <th>Izoh</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in records %}
+                <tr>
+                    <td style="color:var(--text-muted);">{{ forloop.counter }}</td>
+                    <td>
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <div class="avatar-circle">{{ r.student.first_name|first }}</div>
+                            <a href="{% url 'students:detail' r.student.pk %}"
+                                style="font-weight:600;color:var(--dark);text-decoration:none;">{{ r.student }}</a>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge-custom
+              {% if r.status == 'present' %}badge-active
+              {% elif r.status == 'absent' %}badge-unpaid
+              {% elif r.status == 'late' %}badge-partial
+              {% else %}badge-inactive{% endif %}">
+                            {{ r.get_status_display }}
+                        </span>
+                    </td>
+                    <td style="font-size:12px;color:var(--text-muted);">{{ r.notes|default:"—" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4">
+                        <div class="empty-state">
+                            <div class="empty-icon">📋</div>
+                            <h4>Yozuvlar mavjud emas</h4>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

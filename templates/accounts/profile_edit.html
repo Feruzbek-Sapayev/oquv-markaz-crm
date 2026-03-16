@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+{% block title %}Profilni tahrirlash{% endblock %}
+{% block page_title %}Profilni tahrirlash{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <div class="page-title">Profilni tahrirlash</div>
+        <div class="page-subtitle">Shaxsiy ma'lumotlaringizni yangilang</div>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'accounts:profile' %}" class="btn-outline-custom"><i class="fas fa-arrow-left"></i> Orqaga</a>
+    </div>
+</div>
+
+<div class="row g-4 justify-content-center">
+    <div class="col-lg-6">
+        <div class="card-custom">
+            <div class="card-body-custom" style="padding:32px;">
+                <form method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
+
+                    <!-- Avatar Preview -->
+                    <div style="text-align:center;margin-bottom:24px;">
+                        {% if user.avatar %}
+                        <img src="{{ user.avatar.url }}" id="avatarPreview"
+                            style="width:90px;height:90px;border-radius:50%;object-fit:cover;border:4px solid rgba(99,102,241,0.2);margin-bottom:12px;">
+                        {% elif profile and profile.photo %}
+                        <img src="{{ profile.photo.url }}" id="avatarPreview"
+                            style="width:90px;height:90px;border-radius:50%;object-fit:cover;border:4px solid rgba(99,102,241,0.2);margin-bottom:12px;">
+                        {% else %}
+                        <div id="avatarPreview"
+                            style="width:90px;height:90px;background:linear-gradient(135deg,var(--primary),var(--secondary));border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:36px;font-weight:800;margin:0 auto 12px;">
+                            {{ user.username|first|upper }}
+                        </div>
+                        {% endif %}
+                        <div>
+                            <label for="id_photo" class="btn-outline-custom" style="cursor:pointer;padding:6px 14px;font-size:12px;">
+                                <i class="fas fa-camera me-1"></i> Rasm yuklash
+                            </label>
+                            <input type="file" id="id_photo" name="photo" accept="image/*" style="display:none;"
+                                onchange="previewProfilePhoto(this)">
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <label class="form-label" style="font-weight:600;font-size:13px;color:var(--text-heading);">Ism</label>
+                            <input type="text" name="first_name" value="{{ user.first_name }}" class="form-control" required>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label" style="font-weight:600;font-size:13px;color:var(--text-heading);">Familiya</label>
+                            <input type="text" name="last_name" value="{{ user.last_name }}" class="form-control" required>
+                        </div>
+
+                        {% if profile and profile.middle_name is not None %}
+                        <div class="col-12">
+                            <label class="form-label" style="font-weight:600;font-size:13px;color:var(--text-heading);">Otasining ismi</label>
+                            <input type="text" name="middle_name" value="{{ profile.middle_name|default:'' }}" class="form-control">
+                        </div>
+                        {% endif %}
+
+                        <div class="col-sm-6">
+                            <label class="form-label" style="font-weight:600;font-size:13px;color:var(--text-heading);">Telefon</label>
+                            <input type="text" name="phone" value="{{ user.phone|default:'' }}" class="form-control">
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label" style="font-weight:600;font-size:13px;color:var(--text-heading);">Email</label>
+                            <input type="email" name="email" value="{{ user.email|default:'' }}" class="form-control">
+                        </div>
+
+                        <div class="col-sm-6">
+                            <label class="form-label" style="font-weight:600;font-size:13px;color:var(--text-heading);">Tug'ilgan sana</label>
+                            <input type="date" name="birth_date" value="{% if profile and profile.birth_date %}{{ profile.birth_date|date:'Y-m-d' }}{% endif %}" class="form-control">
+                        </div>
+
+                        {% if profile and profile.address is not None %}
+                        <div class="col-12">
+                            <label class="form-label" style="font-weight:600;font-size:13px;color:var(--text-heading);">Manzil</label>
+                            <textarea name="address" class="form-control" rows="2">{{ profile.address|default:'' }}</textarea>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-flex gap-3 mt-4">
+                        <button type="submit" class="btn-primary-custom" style="flex-grow:1;justify-content:center;">
+                            <i class="fas fa-check me-2"></i> Saqlash
+                        </button>
+                        <a href="{% url 'accounts:profile' %}" class="btn-outline-custom" style="justify-content:center;">
+                            Bekor qilish
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function previewProfilePhoto(input) {
+    const preview = document.getElementById('avatarPreview');
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            // If preview is a div (initial), replace with img
+            if (preview.tagName === 'DIV') {
+                const img = document.createElement('img');
+                img.id = 'avatarPreview';
+                img.src = e.target.result;
+                img.style.cssText = 'width:90px;height:90px;border-radius:50%;object-fit:cover;border:4px solid rgba(99,102,241,0.2);margin-bottom:12px;display:block;margin-left:auto;margin-right:auto;';
+                preview.parentNode.replaceChild(img, preview);
+            } else {
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+            }
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+</script>
+{% endblock %}

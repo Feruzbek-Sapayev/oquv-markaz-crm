@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+{% load currency_tags %}
+{% block title %}Dashboard | Talaba{% endblock %}
+{% block page_title %}Mening Dashboardim{% endblock %}
+
+{% block content %}
+<div class="row g-4 mb-4">
+    <div class="col-md-6 col-lg-4">
+        <div class="card-custom h-100">
+            <div class="card-body-custom p-4 text-center">
+                <div class="avatar-circle mx-auto mb-3" style="width: 60px; height: 60px; font-size: 24px;">
+                    <i class="fas fa-users"></i>
+                </div>
+                <h5 class="fw-bold mb-1" style="color: var(--text-heading);">Faol Guruhlarim</h5>
+                <h2 class="display-5 fw-bold mb-0" style="color: var(--primary);">{{ enrollments.count }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card-custom">
+            <div class="card-header-custom border-bottom-0 pb-0">
+                <h5 class="fw-bold mb-0" style="color: var(--text-heading);">Mening Guruhlarim</h5>
+            </div>
+            <div class="card-body-custom p-4">
+                <div class="table-responsive">
+                    <table class="table-custom">
+                        <thead>
+                            <tr>
+                                <th>Guruh</th>
+                                <th>Kurs</th>
+                                <th>O'qituvchi</th>
+                                <th class="text-center">Amallar</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for e in enrollments %}
+                            <tr>
+                                <td><span class="fw-bold">{{ e.group.name }}</span></td>
+                                <td>{{ e.group.course.name }}</td>
+                                <td>
+                                    {% if e.group.teacher %}
+                                        <div style="font-size:12px;">{{ e.group.teacher.get_full_name }}</div>
+                                    {% else %}
+                                        <span class="text-muted small">—</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    <a href="{% url 'attendance:session_list' %}?group={{ e.group.pk }}" class="btn-icon" title="Davomat">
+                                        <i class="fas fa-calendar-check text-primary"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="4" class="text-center">Siz hali birorta guruhga a'zo emassiz.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card-custom">
+            <div class="card-header-custom border-bottom-0 pb-0">
+                <h5 class="fw-bold mb-0" style="color: var(--text-heading);">So'nggi To'lovlar</h5>
+            </div>
+            <div class="card-body-custom p-0">
+                <table class="table-custom">
+                    <tbody>
+                        {% for p in payments %}
+                        <tr>
+                            <td>
+                                <div class="fw-bold" style="color: var(--text-heading);">{{ p.month }}/{{ p.year }}</div>
+                                <div class="small text-muted">{{ p.paid_at|date:"d.m.Y" }}</div>
+                            </td>
+                            <td class="text-end">
+                                <div class="fw-bold" style="color: var(--text-heading);">{{ p.amount|money_format }} <span class="small text-muted">so'm</span></div>
+                                <span class="badge {% if p.status == 'paid' %}text-bg-success{% elif p.status == 'partial' %}text-bg-warning{% else %}text-bg-danger{% endif %}" style="border-radius: 8px; font-size: 10px;">
+                                    {{ p.get_status_display }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="2" class="text-center py-4 text-muted">To'lovlar tarixi mavjud emas.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <div class="p-3">
+                    <a href="{% url 'payments:list' %}" class="btn-outline-custom w-100 py-2">Barcha To'lovlar</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,98 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uz">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kirish | O'quv Markaz CRM</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link href="{% static 'css/style.css' %}" rel="stylesheet">
+</head>
+
+<body>
+    <div class="login-page">
+        <div class="login-side-form">
+            <!-- Floating particles bg -->
+            <div style="position:absolute;top:0;left:0;right:0;bottom:0;overflow:hidden;z-index:0;">
+                <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" style="opacity:0.04">
+                    <defs>
+                        <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
+                            <path d="M 60 0 L 0 0 0 60" fill="none" stroke="white" stroke-width="1" />
+                        </pattern>
+                    </defs>
+                    <rect width="100%" height="100%" fill="url(#grid)" />
+                </svg>
+            </div>
+
+            <div class="login-card">
+                <div class="login-logo">
+                    <div class="icon">🎓</div>
+                    <div class="text">
+                        <div class="t1">O'quv Markaz</div>
+                        <div class="t2">CRM TIZIM • v1.0</div>
+                    </div>
+                </div>
+
+                <h2>Xush kelibsiz 👋</h2>
+                <p>Tizimga kirish uchun ma'lumotlaringizni kiriting.</p>
+
+                {% if messages %}
+                {% for message in messages %}
+                <div class="alert alert-danger"
+                    style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#fca5a5;border-radius:10px;padding:10px 14px;font-size:13px;margin-bottom:16px;">
+                    <i class="fas fa-exclamation-circle me-2"></i>{{ message }}
+                </div>
+                {% endfor %}
+                {% endif %}
+
+                <form method="POST" novalidate>
+                    {% csrf_token %}
+                    <div class="mb-4">
+                        <label><i class="fas fa-user me-1" style="opacity:0.6;"></i> Foydalanuvchi nomi</label>
+                        <input type="text" name="username" class="form-control" placeholder="Username kiriting..." required
+                            autofocus>
+                    </div>
+                    <div class="mb-4">
+                        <label><i class="fas fa-lock me-1" style="opacity:0.6;"></i> Parol</label>
+                        <div style="position:relative;">
+                            <input type="password" name="password" id="passwordField" class="form-control"
+                                placeholder="Parol kiriting..." required>
+                            <button type="button" onclick="togglePass()"
+                                style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer;">
+                                <i class="fas fa-eye" id="eyeIcon"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-login">
+                        <i class="fas fa-right-to-bracket me-2"></i>Tizimga kirish
+                    </button>
+                </form>
+
+                <div
+                    style="margin-top:28px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.08);display:flex;gap:16px;font-size:12px;color:rgba(255,255,255,0.3);">
+                    <span><i class="fas fa-shield-halved me-1"></i>Xavfsiz ulanish</span>
+                    <span><i class="fas fa-database me-1"></i>PostgreSQL</span>
+                    <span><i class="fas fa-code me-1"></i>Django 5</span>
+                </div>
+            </div>
+        </div>
+        <div class="login-side-image"></div>
+    </div>
+    <script>
+        function togglePass() {
+            const f = document.getElementById('passwordField');
+            const e = document.getElementById('eyeIcon');
+            if (f.type === 'password') {
+                f.type = 'text';
+                e.className = 'fas fa-eye-slash';
+            } else {
+                f.type = 'password';
+                e.className = 'fas fa-eye';
+            }
+        }
+    </script>
+</body>
+
+</html>

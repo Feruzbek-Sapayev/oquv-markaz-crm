@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card-custom">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4 class="mb-0">{{ title }}</h4>
+                <a href="{% url 'dashboard:home' %}" class="btn-outline-custom btn-sm">Orqaga</a>
+            </div>
+
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="mb-3">
+                    <label class="form-label">{{ form.recipient_type.label }}</label>
+                    {{ form.recipient_type }}
+                </div>
+
+                <div id="specific-users-div" class="mb-3" style="display: none;">
+                    <label class="form-label">{{ form.specific_users.label }}</label>
+                    {{ form.specific_users }}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">{{ form.title.label }}</label>
+                    {{ form.title }}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">{{ form.message.label }}</label>
+                    {{ form.message }}
+                </div>
+
+                <div class="d-grid">
+                    <button type="submit" class="btn-primary-custom">Xabar yuborish</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const typeSelect = document.querySelector('select[name="recipient_type"]');
+        const specificDiv = document.getElementById('specific-users-div');
+
+        function toggleSpecific() {
+            if (typeSelect.value === 'specific') {
+                specificDiv.style.display = 'block';
+            } else {
+                specificDiv.style.display = 'none';
+            }
+        }
+
+        typeSelect.addEventListener('change', toggleSpecific);
+        toggleSpecific();
+    });
+</script>
+{% endblock %}

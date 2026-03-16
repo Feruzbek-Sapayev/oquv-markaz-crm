@@ -1,0 +1,111 @@
+# ===========================
+# Python
+# ===========================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+*.pyo
+*.pyc
+
+# ===========================
+# Virtual Environment
+# ===========================
+venv/
+env/
+ENV/
+.venv/
+.env/
+virtualenv/
+
+# ===========================
+# Django
+# ===========================
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+media/
+
+# Static files (collect qilingan)
+staticfiles/
+static_root/
+
+# Migrations (ixtiyoriy - ko'p loyihalarda track qilinadi)
+# */migrations/
+
+# ===========================
+# Environment Variables
+# ===========================
+.env
+.env.*
+!.env.example
+*.env
+
+# ===========================
+# IDE / Editor
+# ===========================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ===========================
+# Testing
+# ===========================
+.coverage
+.tox/
+htmlcov/
+.pytest_cache/
+coverage.xml
+*.cover
+nosetests.xml
+test-results/
+
+# ===========================
+# Celery
+# ===========================
+celerybeat-schedule
+celerybeat.pid
+
+# ===========================
+# Docker
+# ===========================
+.dockerignore
+
+# ===========================
+# Secrets / Keys
+# ===========================
+*.pem
+*.key
+secrets.json
+
+# ===========================
+# Node (agar frontend bo'lsa)
+# ===========================
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# ===========================
+# Misc
+# ===========================
+*.bak
+*.tmp
+*.swp
+.cache/

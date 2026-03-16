@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card-custom">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4 class="mb-0">{{ title }}</h4>
+                <button onclick="markAllRead()" class="btn-outline-custom btn-sm">Barchasini o'qilgan deb belgilash</button>
+            </div>
+
+            <div class="list-group list-group-flush">
+                {% for n in notifications %}
+                <div class="list-group-item bg-transparent border-0 px-0 py-3 {% if not n.is_read %}fw-bold{% endif %}" id="n-{{ n.pk }}">
+                    <div class="d-flex w-100 justify-content-between align-items-center">
+                        <h5 class="mb-1" style="color: var(--primary);">{{ n.title }}</h5>
+                        <small class="text-muted">{{ n.created_at|date:"d.m.Y H:i" }}</small>
+                    </div>
+                    <p class="mb-1 text-muted">{{ n.message }}</p>
+                    <div class="mt-2 d-flex justify-content-between align-items-center">
+                        <small class="text-muted">Kimdan: {{ n.sender.get_full_name|default:"Tizim" }}</small>
+                        {% if not n.is_read %}
+                        <button onclick="markRead('{{ n.pk }}')" class="btn btn-sm btn-link p-0 text-decoration-none" style="font-size: 0.8rem;">O'qildi</button>
+                        {% endif %}
+                    </div>
+                </div>
+                <hr class="my-0 opacity-10">
+                {% empty %}
+                <div class="text-center py-5">
+                    <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">Hozircha xabarlar yo'q</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function markRead(pk) {
+        fetch(`/notifications/mark-read/${pk}/`, {
+            method: 'GET',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        }).then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                const item = document.getElementById(`n-${pk}`);
+                item.classList.remove('fw-bold');
+                const btn = item.querySelector('button');
+                if (btn) btn.remove();
+                updateUnreadCount();
+            }
+        });
+    }
+
+    function markAllRead() {
+        fetch('/notifications/mark-all-read/', {
+            method: 'GET',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        }).then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                location.reload();
+            }
+        });
+    }
+</script>
+{% endblock %}

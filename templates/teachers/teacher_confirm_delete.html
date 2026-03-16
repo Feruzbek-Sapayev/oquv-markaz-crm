@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block title %}O'chirishni tasdiqlash{% endblock %}
+{% block page_title %}O'chirishni tasdiqlash{% endblock %}
+
+{% block content %}
+<div style="max-width:520px;margin:0 auto;">
+    <div class="card-custom" style="padding:40px;text-align:center;">
+        <div
+            style="width:72px;height:72px;background:rgba(239,68,68,0.1);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+            <i class="fas fa-trash" style="font-size:28px;color:var(--danger);"></i>
+        </div>
+        <h3 style="font-size:18px;font-weight:700;margin-bottom:8px;">Haqiqatan ham o'chirilsinmi?</h3>
+        <p style="color:var(--text-muted);font-size:14px;margin-bottom:28px;">
+            <strong>{{ obj }}</strong> doimiy o'chiriladi. Bu amalni bekor qilib bo'lmaydi.
+        </p>
+        <form method="POST" class="d-flex gap-3 justify-content-center">
+            {% csrf_token %}
+            <button type="submit" class="btn-danger-custom"><i class="fas fa-trash"></i> Ha, o'chirish</button>
+            <a href="{% url 'teachers:list' %}" class="btn-outline-custom">Bekor qilish</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

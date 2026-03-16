@@ -1,0 +1,403 @@
+/* Align with Core Brand Theme */
+:root {
+    --matrix-bg: var(--bg-main);
+    --matrix-card-bg: var(--bg-card);
+    --matrix-border: var(--border-subtle);
+    --matrix-text: var(--text-body);
+    --matrix-heading: var(--text-heading);
+    --matrix-muted: var(--text-muted);
+    --matrix-hover: var(--bg-hover);
+    
+    /* Attendance specific standardized colors */
+    --att-green: #10b981;
+    --att-red: #ef4444;
+    --att-empty: #94a3b8;
+}
+
+/* Group Selection Style - Widened */
+.group-filter-panel {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    margin-bottom: 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: none;
+}
+
+.group-select-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--bg-card) !important; /* Explicitly match navbar */
+    border-radius: 12px;
+    padding: 4px 16px;
+    border: 1px solid var(--matrix-border);
+    min-width: 450px;
+}
+.group-select-container i { color: var(--primary); font-size: 16px; }
+.group-select-container .form-select {
+    border: none !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    font-weight: 600;
+    color: var(--matrix-heading) !important;
+    width: 100%;
+    cursor: pointer;
+    padding-left: 8px !important;
+    box-shadow: none !important;
+}
+
+.matrix-card {
+    background: var(--matrix-card-bg);
+    border-radius: 20px;
+    border: 1px solid var(--matrix-border);
+    overflow: hidden; /* CRITICAL: Prevent table width from expanding the card */
+    box-shadow: var(--card-shadow);
+    width: 100%;
+    max-width: 100%;
+}
+
+.matrix-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px 28px;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--matrix-border);
+}
+.month-range {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.custom-date-selector {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: var(--bg-card) !important; /* Match navbar */
+    border: 1px solid var(--matrix-border);
+    border-radius: 12px;
+    padding: 6px 16px;
+    transition: var(--transition);
+    cursor: pointer;
+}
+.custom-date-selector:hover {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(var(--primary-rgb), 0.1);
+}
+.custom-date-selector i {
+    color: var(--primary);
+    font-size: 16px;
+    margin-right: 10px;
+}
+
+.date-select {
+    background: transparent !important;
+    border: none !important;
+    color: var(--matrix-heading) !important;
+    font-size: 18px;
+    font-weight: 700;
+    padding: 0 !important;
+    padding-right: 24px !important;
+    cursor: pointer;
+    width: auto !important;
+    text-transform: capitalize;
+    appearance: none; /* Hide default arrow */
+}
+.date-select:focus { box-shadow: none !important; }
+.date-select option { background: var(--matrix-card-bg); color: var(--matrix-text); font-size: 16px; }
+
+/* Custom Arrow for Select */
+.custom-date-selector::after {
+    content: '\f078';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    position: absolute;
+    right: 16px;
+    font-size: 12px;
+    color: var(--matrix-muted);
+    pointer-events: none;
+    transition: var(--transition);
+}
+.custom-date-selector:hover::after { color: var(--primary); }
+
+/* Stats Component Style */
+.matrix-stats {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+}
+.stat-item {
+    display: flex;
+    flex-direction: column;
+}
+.stat-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    color: var(--matrix-muted);
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    margin-bottom: 2px;
+}
+.stat-value {
+    font-family: 'Outfit', sans-serif;
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--matrix-heading);
+}
+.stat-value.present { color: var(--att-green); }
+.stat-value.absent { color: var(--att-red); }
+.stat-value.percent { color: var(--primary); }
+
+.nav-arrows {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.nav-btn {
+    background: var(--bg-input);
+    color: var(--matrix-heading);
+    border: 1px solid var(--matrix-border);
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition);
+    text-decoration: none;
+}
+.nav-btn:hover { background: var(--primary); color: white; border-color: var(--primary); transform: scale(1.05); }
+
+.download-btn {
+    background: var(--att-green);
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    transition: var(--transition);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+}
+.download-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(16, 185, 129, 0.3); color: white; }
+
+/* Matrix Table Design */
+.table-container {
+    position: relative;
+    width: 100%;
+    max-width: 100%; /* Ensure it does not exceed parent width */
+    overflow-x: auto;
+    overflow-y: hidden;
+    display: block;
+    border-radius: 0 0 20px 20px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary) transparent;
+    background: var(--matrix-card-bg);
+}
+
+/* Dedicated Scrollbar Style for Table Only */
+.table-container::-webkit-scrollbar {
+    height: 8px;
+    background-color: transparent;
+}
+.table-container::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.03);
+    border-radius: 10px;
+}
+.table-container::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    border-radius: 10px;
+    border: 2px solid var(--matrix-card-bg);
+}
+
+.table-matrix {
+    width: 100%;
+    min-width: 1500px; /* Force minimum width to ensure all dates and full names fit */
+    border-collapse: separate;
+    border-spacing: 0;
+}
+.table-matrix th, .table-matrix td {
+    padding: 16px 10px;
+    text-align: center;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--matrix-border);
+    font-size: 13px;
+    white-space: nowrap; /* Keep content on one line */
+}
+/* Specific width for date columns */
+.table-matrix th:not(.is-col):not(.pct-col),
+.table-matrix td:not(.is-col):not(.pct-col) {
+    width: 45px;
+}
+
+.table-matrix thead th {
+    font-weight: 700;
+    color: var(--matrix-muted);
+    background: var(--bg-input);
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.table-matrix .is-col {
+    text-align: left;
+    padding-left: 24px;
+    padding-right: 20px;
+    color: var(--matrix-heading);
+    font-weight: 700;
+    font-size: 14px;
+    min-width: 320px;
+    position: sticky;
+    left: 0;
+    background: var(--matrix-card-bg);
+    z-index: 11;
+    border-right: 1px solid var(--matrix-border);
+}
+.table-matrix thead th.is-col {
+    z-index: 12;
+    background: var(--bg-input);
+    font-size: 13px; /* Header F.I.SH even larger */
+    letter-spacing: 0.1em;
+}
+
+.table-matrix .pct-col {
+    position: sticky;
+    right: 0;
+    background: var(--matrix-card-bg);
+    z-index: 11;
+    border-left: 1px solid var(--matrix-border);
+    min-width: 100px;
+    padding-right: 28px;
+}
+.table-matrix thead th.pct-col {
+    z-index: 12;
+    background: var(--bg-input);
+}
+
+.student-name-text {
+    color: var(--matrix-heading);
+    white-space: nowrap;
+    font-weight: 600;
+}
+
+/* Standardized Status Icons */
+.att-status-circle {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    min-height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 12px;
+    box-sizing: border-box;
+    vertical-align: middle;
+    border: 1.5px solid transparent;
+}
+.att-status-circle:active { transform: scale(0.85); }
+
+.att-present {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--att-green);
+    border-color: rgba(16, 185, 129, 0.4);
+}
+.att-present:hover {
+    background: rgba(16, 185, 129, 0.25);
+}
+.att-absent {
+    background: rgba(239, 68, 68, 0.12);
+    color: var(--att-red);
+    border-color: rgba(239, 68, 68, 0.35);
+}
+.att-absent:hover {
+    background: rgba(239, 68, 68, 0.22);
+}
+.att-empty {
+    background: transparent;
+    color: transparent;
+    border-color: rgba(148, 163, 184, 0.4);
+}
+.att-empty:hover {
+    border-color: var(--att-green);
+    background: rgba(16, 185, 129, 0.07);
+}
+
+.percent-value-text {
+    color: var(--matrix-heading);
+    font-weight: 800;
+    font-size: 15px;
+}
+
+.attendance-cell.future-date {
+    opacity: 0.35;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+.attendance-cell.is-today {
+    background: rgba(var(--primary-rgb), 0.05);
+}
+.header-today {
+    color: var(--primary) !important;
+}
+
+body.dark {
+    --matrix-border: rgba(255, 255, 255, 0.06);
+    --matrix-hover: #1f2937;
+    --matrix-card-bg: #111827;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 991px) {
+    .group-filter-panel {
+        flex-direction: column;
+        gap: 16px;
+        align-items: stretch;
+    }
+    .group-select-container {
+        min-width: 0;
+        width: 100%;
+    }
+    .download-btn {
+        justify-content: center;
+    }
+    .matrix-header {
+        flex-direction: column;
+        gap: 16px;
+        padding: 20px;
+        align-items: flex-start;
+    }
+    .nav-arrows {
+        width: 100%;
+        justify-content: flex-end;
+    }
+}
+
+@media (max-width: 576px) {
+    .date-select {
+        font-size: 16px;
+    }
+    .table-matrix .is-col {
+        min-width: 200px;
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+    .student-name-text {
+        font-size: 12px;
+    }
+}

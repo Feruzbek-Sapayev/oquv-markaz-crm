@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+{% load currency_tags %}
+{% block title %}{{ course.name }} | Kurs{% endblock %}
+{% block page_title %}Kurs ma'lumotlari{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <div class="page-title">{{ course.name }}</div>
+        <div class="page-subtitle">Kurs haqida batafsil ma'lumot va o'qituvchilar</div>
+    </div>
+    <div class="d-flex gap-2">
+        {% if user.is_admin_role %}
+        <a href="{% url 'courses:course_edit' course.pk %}" class="btn-outline-custom"><i class="fas fa-edit"></i> Tahrirlash</a>
+        {% endif %}
+        <a href="{% url 'courses:course_list' %}" class="btn-outline-custom"><i class="fas fa-arrow-left"></i> Orqaga</a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card-custom overflow-hidden">
+            {% if course.image %}
+                <div style="width:100%; height:200px; position:relative;">
+                    <img src="{{ course.image.url }}" style="width:100%; height:100%; object-fit:cover;">
+                    <div style="position:absolute; bottom:0; left:0; right:0; height:60%; background:linear-gradient(transparent, rgba(0,0,0,0.7));"></div>
+                    <div style="position:absolute; bottom:16px; left:20px;">
+                        <span class="badge-custom {% if course.is_active %}badge-active{% else %}badge-inactive{% endif %}" style="backdrop-filter: blur(4px); background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2);">
+                            {% if course.is_active %}Faol{% else %}Faol emas{% endif %}
+                        </span>
+                    </div>
+                </div>
+            {% else %}
+                <div style="width:100%; height:140px; background:linear-gradient(135deg, var(--primary), var(--secondary)); display:flex; align-items:center; justify-content:center; color:rgba(255,255,255,0.9); font-size:48px;">
+                    <i class="fas fa-book-open"></i>
+                </div>
+            {% endif %}
+
+            <div class="card-body-custom" style="padding:24px;">
+                <div class="d-flex align-items-center justify-content-between mb-4">
+                    <h5 style="font-weight:700; margin:0; color:var(--text-heading);">Kurs tafsilotlari</h5>
+                    {% if not course.image %}
+                        <span class="badge-custom {% if course.is_active %}badge-active{% else %}badge-inactive{% endif %}">
+                            {% if course.is_active %}Faol{% else %}Faol emas{% endif %}
+                        </span>
+                    {% endif %}
+                </div>
+
+                <div class="info-item mb-3" style="display:flex; gap:12px; align-items:center;">
+                    <div style="width:36px; height:36px; border-radius:10px; background:rgba(79, 107, 239, 0.1); color:var(--primary); display:flex; align-items:center; justify-content:center;">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div>
+                        <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">Davomiyligi</div>
+                        <div style="font-size:15px; font-weight:700; color:var(--text-heading);">{{ course.duration_months }} oy</div>
+                    </div>
+                </div>
+
+                <div class="info-item mb-3" style="display:flex; gap:12px; align-items:center;">
+                    <div style="width:36px; height:36px; border-radius:10px; background:rgba(47, 191, 143, 0.1); color:var(--success); display:flex; align-items:center; justify-content:center;">
+                        <i class="fas fa-wallet"></i>
+                    </div>
+                    <div>
+                        <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">Oylik to'lov</div>
+                        <div style="font-size:15px; font-weight:700; color:var(--success);">{{ course.monthly_fee|money_format }} so'm</div>
+                    </div>
+                </div>
+
+                <div class="info-item mb-3" style="display:flex; gap:12px; align-items:center;">
+                    <div style="width:36px; height:36px; border-radius:10px; background:rgba(168, 85, 247, 0.1); color:#a855f7; display:flex; align-items:center; justify-content:center;">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div>
+                        <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">Guruhlar soni</div>
+                        <div style="font-size:15px; font-weight:700; color:var(--text-heading);">{{ groups.count }} ta</div>
+                    </div>
+                </div>
+
+                {% if course.description %}
+                    <div style="margin-top:24px; padding-top:20px; border-top:1px solid var(--border-subtle);">
+                        <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; font-weight:600; margin-bottom:8px;">Kurs haqida tavsif</div>
+                        <p style="font-size:13.5px; line-height:1.6; color:var(--text-body); margin:0;">{{ course.description }}</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card-custom">
+            <div class="card-header-custom">
+                <h5><i class="fas fa-users me-2" style="color:var(--primary);"></i>Ushbu kursdagi guruhlar</h5>
+            </div>
+            <div style="overflow-x:auto;">
+                <table class="table-custom">
+                    <thead>
+                        <tr>
+                            <th>Guruh</th>
+                            <th>O'qituvchi</th>
+                            <th>Vaqt</th>
+                            <th>Kunlar</th>
+                            <th>Talabalar</th>
+                            <th>Holat</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for g in groups %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'courses:group_detail' g.pk %}" style="font-weight:600; text-decoration:none; color:inherit;">{{ g.name }}</a>
+                            </td>
+                            <td>
+                                {% if g.teacher %}
+                                    <div style="font-size:13px; font-weight:600;">{{ g.teacher.get_full_name }}</div>
+                                {% else %}
+                                    <span class="text-muted small">Yo'q</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ g.start_time|time:"H:i" }}</td>
+                            <td>{{ g.get_days_display }}</td>
+                            <td>{{ g.enrollments.count }}/{{ g.max_students }}</td>
+                            <td>
+                                <span class="badge-custom {% if g.is_active %}badge-active{% else %}badge-inactive{% endif %}">
+                                    {% if g.is_active %}Faol{% else %}Faol emas{% endif %}
+                                </span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" style="text-align:center;padding:20px;color:var(--text-muted);">Guruhlar mavjud emas</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

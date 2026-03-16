@@ -1,0 +1,209 @@
+{% extends 'base.html' %}
+{% block title %}Guruhlar{% endblock %}
+{% block page_title %}Guruhlar{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <div class="page-title">Guruhlar ro'yxati</div>
+        <div class="page-subtitle">Barcha o'quv guruhlari</div>
+    </div>
+    {% if user.is_admin_role %}
+    <a href="{% url 'courses:group_create' %}" class="btn-primary-custom"><i class="fas fa-plus"></i> Yangi Guruh</a>
+    {% endif %}
+</div>
+
+<style>
+.action-dropdown {
+    position: relative;
+    display: inline-block;
+}
+.action-dots-btn {
+    width: 34px;
+    height: 34px;
+    border: none;
+    background: rgba(99,102,241,0.08);
+    border-radius: 8px;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    transition: background 0.2s, color 0.2s;
+}
+.action-dots-btn:hover {
+    background: rgba(99,102,241,0.18);
+    color: var(--primary);
+}
+.action-menu {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: calc(100% + 6px);
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+    z-index: 9999;
+    min-width: 170px;
+    overflow: hidden;
+    animation: dropFadeIn 0.15s ease-out;
+}
+.action-menu.open { display: block; }
+@keyframes dropFadeIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.action-menu a, .action-menu button {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-heading);
+    text-decoration: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s;
+}
+.action-menu a:hover, .action-menu button:hover {
+    background: rgba(99,102,241,0.07);
+}
+.action-menu a i, .action-menu button i {
+    width: 16px;
+    text-align: center;
+    opacity: 0.7;
+}
+.action-menu .menu-danger { color: var(--danger) !important; }
+.action-menu .menu-danger i { color: var(--danger); }
+.action-menu-divider {
+    height: 1px;
+    background: var(--border-subtle);
+    margin: 4px 0;
+}
+</style>
+
+<div class="card-custom">
+    <div style="overflow-x:auto;">
+        <table class="table-custom">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Guruh</th>
+                    <th>Kurs</th>
+                    <th>O'qituvchi</th>
+                    <th>Vaqt</th>
+                    <th>Kunlar</th>
+                    <th>O'quvchilar</th>
+                    <th>Holat</th>
+                    <th style="text-align:right">Amallar</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for g in groups %}
+                <tr>
+                    <td style="color:var(--text-muted);font-size:12px;">{{ forloop.counter }}</td>
+                    <td>
+                        <a href="{% url 'courses:group_detail' g.pk %}"
+                            style="font-weight:700;color:var(--dark);text-decoration:none;">{{ g.name }}</a>
+                    </td>
+                    <td style="font-size:12px;color:var(--text-muted);">{{ g.course.name }}</td>
+                    <td>
+                        {% if g.teacher %}
+                            <div style="font-size:12px;">{{ g.teacher.get_full_name }}</div>
+                        {% else %}
+                            <span style="color:var(--text-muted);font-size:12px;">—</span>
+                        {% endif %}
+                    </td>
+                    <td style="font-size:12px;">{{ g.start_time|time:"H:i" }}–{{ g.end_time|time:"H:i" }}</td>
+                    <td style="font-size:12px;color:var(--text-muted);">{{ g.get_days_display }}</td>
+                    <td>
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <span style="font-weight:700;color:var(--primary);">
+                                {{ g.student_count }}/{{ g.max_students }}
+                            </span>
+                            <div class="progress-custom" style="width:50px;">
+                                <div class="progress-bar-custom"
+    style="width:{% if g.max_students %}{% widthratio g.student_count g.max_students 100 %}{% else %}0{% endif %}%">
+</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td><span
+                            class="badge-custom {% if g.is_active %}badge-active{% else %}badge-inactive{% endif %}">
+                            {% if g.is_active %}Faol{% else %}Faol emas{% endif %}</span></td>
+                    <td style="text-align:right;">
+                        <div class="action-dropdown">
+                            <button class="action-dots-btn" onclick="toggleMenu(event, 'menu-{{ g.pk }}')">
+                                <i class="fas fa-ellipsis-vertical"></i>
+                            </button>
+                            <div id="menu-{{ g.pk }}" class="action-menu">
+                                {% if not user.is_student %}
+                                    {% if user.is_admin_role or user.role == 'teacher' %}
+                                    <a href="{% url 'courses:group_edit' g.pk %}">
+                                        <i class="fas fa-edit"></i> Tahrirlash
+                                    </a>
+                                    {% endif %}
+                                    {% if user.is_admin_role %}
+                                    <button class="menu-danger"
+                                        onclick="openDeleteModal('{% url 'courses:group_delete' g.pk %}', '{{ g.name }}')">
+                                        <i class="fas fa-trash"></i> O'chirish
+                                    </button>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="9">
+                        <div class="empty-state">
+                            <div class="empty-icon">👥</div>
+                            <h4>Guruhlar mavjud emas</h4>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Pagination -->
+{% include 'includes/_pagination.html' %}
+
+<script>
+function toggleMenu(event, menuId) {
+    event.stopPropagation();
+    // Close all other open menus
+    document.querySelectorAll('.action-menu.open').forEach(m => {
+        if (m.id !== menuId) m.classList.remove('open');
+    });
+    document.getElementById(menuId).classList.toggle('open');
+}
+
+function openDeleteModal(url, name) {
+    // Close dropdown
+    document.querySelectorAll('.action-menu.open').forEach(m => m.classList.remove('open'));
+    // Open the existing delete confirm modal
+    const modal = document.getElementById('deleteConfirmModal');
+    if (modal) {
+        modal.querySelector('form').action = url;
+        const nameEl = modal.querySelector('[data-name-display]');
+        if (nameEl) nameEl.textContent = name;
+        new bootstrap.Modal(modal).show();
+    }
+}
+
+// Close menus when clicking outside
+document.addEventListener('click', function() {
+    document.querySelectorAll('.action-menu.open').forEach(m => m.classList.remove('open'));
+});
+</script>
+{% endblock %}

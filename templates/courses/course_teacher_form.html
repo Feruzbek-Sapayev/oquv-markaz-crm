@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }} | Kurs{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <div class="page-title">{{ title }}</div>
+        <div class="page-subtitle">{{ course.name }} kursi uchun</div>
+    </div>
+    <a href="{% url 'courses:course_detail' course.pk %}" class="btn-outline-custom"><i class="fas fa-arrow-left"></i> Orqaga</a>
+</div>
+
+<div class="form-card">
+    <form method="POST">
+        {% csrf_token %}
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label-custom">O'qituvchi <span class="required-star">*</span></label>
+                {{ form.teacher }}
+            </div>
+            <div class="col-md-6">
+                <label class="form-label-custom">Maosh turi <span class="required-star">*</span></label>
+                {{ form.salary_type }}
+            </div>
+            <div id="salary_fixed_div" class="col-md-6">
+                <label class="form-label-custom">Oylik maosh (summa)</label>
+                {{ form.salary_monthly }}
+            </div>
+            <div id="salary_percent_div" class="col-md-6">
+                <label class="form-label-custom">Maosh foizi (%)</label>
+                {{ form.salary_percentage }}
+            </div>
+        </div>
+
+        {% if form.errors %}
+        <div class="alert alert-danger mt-3" style="border-radius:10px;">
+            {% for f, e in form.errors.items %}
+                {% for err in e %}<div>{{ err }}</div>{% endfor %}
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="d-flex gap-3 mt-4">
+            <button type="submit" class="btn-primary-custom"><i class="fas fa-save"></i> Biriktirish</button>
+            <a href="{% url 'courses:course_detail' course.pk %}" class="btn-outline-custom">Bekor qilish</a>
+        </div>
+    </form>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const salaryTypeSelect = document.querySelector('select[name="salary_type"]');
+        const fixedDiv = document.getElementById('salary_fixed_div');
+        const percentDiv = document.getElementById('salary_percent_div');
+
+        function toggleSalaryFields() {
+            if (salaryTypeSelect.value === 'fixed') {
+                fixedDiv.style.display = 'block';
+                percentDiv.style.display = 'none';
+            } else {
+                fixedDiv.style.display = 'none';
+                percentDiv.style.display = 'block';
+            }
+        }
+
+        salaryTypeSelect.addEventListener('change', toggleSalaryFields);
+        toggleSalaryFields(); // Initial call
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,867 @@
+{% extends 'base.html' %}
+{% load currency_tags %}
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/session_list.css' %}">
+<style>
+    /* Tab-specific overrides for attendance matrix */
+    .matrix-card {
+        border-radius: 0 0 20px 20px;
+        border: none;
+        box-shadow: none;
+    }
+    .matrix-header {
+        padding: 16px 20px;
+        background: var(--bg-card);
+        border-bottom: 1px solid var(--border-subtle);
+    }
+    .table-container {
+        border-radius: 0;
+        background: var(--bg-card);
+    }
+    .group-filter-panel {
+        display: none !important;
+    }
+    /* COLUMN WIDTH OPTIMIZATION */
+    .table-matrix .is-col {
+        min-width: fit-content !important;
+        width: 1px;
+        white-space: nowrap;
+        position: sticky !important;
+        left: 0;
+        z-index: 11;
+        background: var(--bg-card) !important;
+    }
+    .table-matrix .pct-col {
+        position: static !important;
+        min-width: 100px !important;
+        width: 100px;
+        text-align: center;
+        border-left: 1px solid var(--border-subtle) !important;
+        background: var(--bg-card) !important;
+    }
+    .table-matrix thead th.pct-col {
+        background: var(--bg-card) !important;
+    }
+    /* All regular body cells: match card background */
+    .table-matrix tbody td:not(.is-col):not(.pct-col) {
+        background: var(--bg-card);
+    }
+    .table-matrix thead th:not(.is-col):not(.pct-col) {
+        background: var(--bg-card) !important;
+    }
+    .table-matrix {
+        min-width: max-content;
+    }
+    
+    /* Group Action Icons */
+    .group-actions-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        padding: 16px 20px;
+        background: var(--bg-card);
+        border-top: 1px solid var(--border-subtle);
+    }
+    .action-btn {
+        width: 42px;
+        height: 42px;
+        border: 1px solid var(--border-subtle);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        background: var(--bg-card);
+        text-decoration: none !important;
+        cursor: pointer;
+    }
+    .action-btn:hover {
+        transform: translateY(-3px);
+        border-color: var(--primary);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        background: var(--bg-input);
+    }
+    .action-btn i { font-size: 16px; }
+    .action-btn.edit i { color: #f59e0b; }
+    .action-btn.delete i { color: #ef4444; }
+    .action-btn.notify i { color: #facc15; }
+    .action-btn.add-user i { color: #6366f1; }
+    .action-btn.laptop i { color: #22c55e; }
+    .action-btn.qr i { color: #3b82f6; }
+</style>
+{% endblock %}
+{% block title %}{{ group.name }} | Guruh{% endblock %}
+{% block page_title %}Guruh tafsilotlari{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div style="display:flex;align-items:center;gap:10px;">
+        <a href="{% url 'courses:group_list' %}" class="btn-outline-custom" title="Orqaga">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+        <div>
+            <div class="page-title">{{ group.name }}</div>
+            <div class="page-subtitle">{{ group.course.name }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon purple"><i class="fas fa-users"></i></div>
+            <div class="stat-value">{{ group.student_count }}</div>
+            <div class="stat-label">O'quvchilar / {{ group.max_students }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon blue"><i class="fas fa-clock"></i></div>
+            <div class="stat-value" style="font-size:20px;">{{ group.start_time|time:"H:i" }}</div>
+            <div class="stat-label">Boshlanish vaqti</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon green"><i class="fas fa-money-bill-wave"></i></div>
+            <div class="stat-value" style="font-size:18px;">{{ group.course.monthly_fee|money_format }}</div>
+            <div class="stat-label">Oylik to'lov (so'm)</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon amber"><i class="fas fa-id-card"></i></div>
+            <div class="stat-value">{% if group.room %}{{ group.room }}{% else %}---{% endif %}</div>
+            <div class="stat-label">Dars xonasi</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 align-items-start">
+    <div class="col-lg-4">
+        <!-- Guruh Ma'lumotlari -->
+        <div class="card-custom mb-4">
+            <div class="card-header-custom">
+                <h5><i class="fas fa-info-circle me-2" style="color:var(--secondary);"></i>Guruh ma'lumotlari</h5>
+            </div>
+            <div class="card-body-custom" style="padding:0;">
+                {% include "includes/_info_row.html" with icon="fa-book" label="Kurs" value=group.course.name %}
+                <!-- Dars vaqti row -->
+                <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 22px;border-bottom:1px solid var(--border-subtle);">
+                    <div style="width:32px;height:32px;background:rgba(99,102,241,0.08);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i class="fas fa-clock" style="color:var(--primary);font-size:12px;"></i>
+                    </div>
+                    <div>
+                        <div style="font-size:11px;color:var(--text-muted);font-weight:500;">Dars vaqti</div>
+                        <div style="font-size:13px;font-weight:600;color:var(--dark);margin-top:1px;">{{ group.start_time|time:"H:i" }} – {{ group.end_time|time:"H:i" }}</div>
+                    </div>
+                </div>
+                {% include "includes/_info_row.html" with icon="fa-calendar-days" label="Kunlar" value=group.get_days_display %}
+                <!-- Kurs davomiyligi row -->
+                <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 22px;border-bottom:1px solid var(--border-subtle);">
+                    <div style="width:32px;height:32px;background:rgba(99,102,241,0.08);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i class="fas fa-calendar-plus" style="color:var(--primary);font-size:12px;"></i>
+                    </div>
+                    <div>
+                        <div style="font-size:11px;color:var(--text-muted);font-weight:500;">Kurs davomiyligi</div>
+                        <div style="font-size:13px;font-weight:600;color:var(--dark);margin-top:1px;">{{ group.start_date }} – {% if group.end_date %}{{ group.end_date }}{% else %}Belgilanmagan{% endif %}</div>
+                    </div>
+                </div>
+                {% if group.room %}
+                    {% include "includes/_info_row.html" with icon="fa-door-open" label="Xona" value=group.room %}
+                {% endif %}
+
+                <!-- Integrated Teacher Section -->
+                <div style="display:flex;align-items:flex-start;gap:10px;padding:12px 22px;border-bottom:1px solid var(--border-subtle);">
+                    <div style="width:32px;height:32px;background:rgba(99,102,241,0.08);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i class="fas fa-chalkboard-user" style="color:var(--primary);font-size:12px;"></i>
+                    </div>
+                    <div style="flex:1;">
+                        <div style="font-size:11px;color:var(--text-muted);font-weight:500;">O'qituvchi</div>
+                        <div style="font-size:13px;font-weight:700;color:var(--dark);margin-top:1px;">
+                            {% if group.teacher %}
+                                <a href="{% url 'teachers:detail' group.teacher.pk %}" style="color:var(--primary); text-decoration:none;">
+                                    {{ group.teacher.get_full_name }}
+                                </a>
+                            {% else %}
+                                <span style="color:var(--text-muted);">Tayinlanmagan</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                {% if not user.is_student %}
+                <div class="group-actions-row">
+                    <a href="{% url 'courses:group_edit' group.pk %}" class="action-btn edit" title="Tahrirlash">
+                        <i class="fas fa-pen"></i>
+                    </a>
+                    {% if user.is_admin_role %}
+                    <a href="#" class="action-btn delete" data-bs-toggle="modal"
+                        data-bs-target="#deleteConfirmModal"
+                        data-url="{% url 'courses:group_delete' group.pk %}"
+                        data-name="{{ group.name }}" title="O'chirish">
+                        <i class="fas fa-trash-alt"></i>
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'notifications:send_mass' %}?group={{ group.pk }}" class="action-btn notify" title="Guruhga xabar yuborish">
+                        <i class="fas fa-comment-dots"></i>
+                    </a>
+                    <a href="{% url 'courses:enrollment_create' group.pk %}" class="action-btn add-user" title="O'quvchi qo'shish">
+                        <i class="fas fa-user-plus"></i>
+                    </a>
+                    <a href="{% url 'courses:lesson_schedule' %}" class="action-btn laptop" title="Dars jadvali">
+                        <i class="fas fa-laptop"></i>
+                    </a>
+                    <a href="#" class="action-btn qr" title="QR Kod" onclick="alert('QR Kod tizimi tez kunda ishga tushadi')">
+                        <i class="fas fa-qrcode"></i>
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <!-- Dashboard Tabs -->
+        <div class="tabs-container mb-4">
+            <div class="tabs-scroll">
+                <button class="tab-btn active" onclick="switchTab(event, 'students_tab')">
+                    <i class="fas fa-user-graduate"></i> O'QUVCHILAR
+                </button>
+                <button class="tab-btn" onclick="switchTab(event, 'attendance_tab')">
+                    <i class="fas fa-user-check"></i> DAVOMAT
+                </button>
+                <button class="tab-btn" onclick="switchTab(event, 'grades_tab')">
+                    <i class="fas fa-graduation-cap"></i> BAHO
+                </button>
+                <button class="tab-btn" onclick="switchTab(event, 'notes_tab')">
+                    <i class="fas fa-bell"></i> ESLATMALAR
+                </button>
+                <button class="tab-btn" onclick="switchTab(event, 'exams_tab')">
+                    <i class="fas fa-flag"></i> IMTIXON
+                </button>
+                <button class="tab-btn" onclick="switchTab(event, 'discounts_tab')">
+                    <i class="fas fa-percent"></i> CHEGIRMALAR
+                </button>
+            </div>
+        </div>
+
+        <!-- Tab Contents -->
+        <div class="tab-contents-wrapper">
+            <div id="students_tab" class="tab-content active">
+                <div class="card-custom">
+                    <div class="card-header-custom">
+                        <div class="d-flex align-items-center gap-3">
+                            <h5 class="mb-0">O'quvchilar ro'yxati</h5>
+                            <span style="font-size:12px;color:var(--text-muted); background:var(--bg-input); padding:2px 10px; border-radius:10px; font-weight:600;">{{ enrollments.count }} ta o'quvchi</span>
+                        </div>
+                        {% if not user.is_student %}
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'courses:group_export' group.pk %}" class="btn-outline-custom" style="padding: 6px 14px; font-size: 13px;">
+                                <i class="fas fa-file-excel"></i> Excel
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+            <div style="overflow-x:auto;">
+                <table class="table-custom">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>O'quvchi</th>
+                            <th>Telefon</th>
+                            <th>Chegirma</th>
+                            <th>To'lov</th>
+                            <th>Qo'shildi</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for e in enrollments %}
+                        <tr>
+                            <td style="color:var(--text-muted);">{{ forloop.counter }}</td>
+                            <td>
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    <div class="avatar-circle">{{ e.student.first_name|first }}</div>
+                                    <a href="{% url 'students:detail' e.student.pk %}"
+                                        style="font-weight:600;color:var(--dark);text-decoration:none;">
+                                        {{ e.student }}
+                                    </a>
+                                </div>
+                            </td>
+                            <td style="font-size:12px;">{{ e.student.phone }}</td>
+                            <td>
+                                {% if e.discount_percent %}
+                                <span class="badge-custom badge-partial">{{ e.discount_percent }}%</span>
+                                {% else %}<span style="color:var(--text-muted);">—</span>{% endif %}
+                            </td>
+                            <td style="font-weight:600;color:var(--success);">{{ e.discounted_fee|money_format }} so'm
+                            </td>
+                            <td style="font-size:12px;color:var(--text-muted);">{{ e.enrolled_at }}</td>
+                            <td>
+                                {% if not user.is_student %}
+                                <form method="POST" action="{% url 'courses:enrollment_remove' e.pk %}"
+                                    onsubmit="return confirm('Guruhdan chiqarilsinmi?');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm"
+                                        style="background:rgba(239,68,68,0.1);color:var(--danger);border:none;border-radius:6px;padding:4px 10px;"
+                                        title="Guruhdan chiqarish">
+                                        <i class="fas fa-user-minus"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7">
+                                <div class="empty-state" style="padding:30px;">
+                                    <div class="empty-icon">👥</div>
+                                    <h4>Hech kim yo'q</h4>
+                                    <a href="{% url 'courses:enrollment_create' group.pk %}"
+                                        class="btn-primary-custom mt-2">O'quvchi qo'shish</a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="attendance_tab" class="tab-content">
+            <div class="card-custom">
+                <div class="matrix-header d-flex justify-content-between align-items-center">
+                    <div class="nav-arrows">
+                         <form method="GET" class="d-flex align-items-center">
+                            <div class="custom-date-selector">
+                                <i class="far fa-calendar-alt"></i>
+                                <select name="month_year" class="form-select date-select" onchange="this.form.submit()">
+                                    {% if session_months %}
+                                        {% for sm in session_months %}
+                                            <option value="{{ sm.value }}" {% if sm.month == current_month and sm.year == current_year %}selected{% endif %}>
+                                                {{ sm.label }}
+                                            </option>
+                                        {% endfor %}
+                                    {% else %}
+                                        <option value="{{ current_month }}-{{ current_year }}">
+                                            Sessiyalar yo'q
+                                        </option>
+                                    {% endif %}
+                                </select>
+                            </div>
+                        </form>
+                    </div>
+
+                    {% if not is_student %}
+                    <a href="{% url 'attendance:export_attendance_excel' %}?group={{ group.id }}&month={{ current_month }}&year={{ current_year }}" 
+                       class="btn-outline-custom" style="padding: 6px 14px; font-size: 13px;">
+                        <i class="fas fa-file-excel"></i> Excel
+                    </a>
+                    {% endif %}
+                </div>
+
+                <div class="table-container">
+                    <table class="table-matrix">
+                        <thead>
+                            <!-- Mavzu qatori -->
+                            <tr style="background: var(--bg-input);">
+                                <th class="is-col" style="font-size:12px; color:var(--text-muted); letter-spacing:0.05em;">MAVZU</th>
+                                {% for d in all_dates %}
+                                <th class="text-center" style="padding: 10px 4px;">
+                                    {% if not user.is_student %}
+                                    <button class="topic-btn"
+                                        data-date="{{ d|date:'Y-m-d' }}"
+                                        data-group="{{ group.pk }}"
+                                        style="background:none;border:none;cursor:pointer;padding:2px;"
+                                        title="Mavzu qo'shish">
+                                        <i class="fas fa-calendar-alt topic-icon"
+                                           id="topic-icon-{{ d|date:'Y-m-d' }}"
+                                           style="font-size:15px;"></i>
+                                    </button>
+                                    {% else %}
+                                    <i class="fas fa-calendar-alt topic-icon"
+                                       id="topic-icon-{{ d|date:'Y-m-d' }}"
+                                       style="font-size:15px;"></i>
+                                    {% endif %}
+                                </th>
+                                {% endfor %}
+                                <th class="pct-col"></th>
+                            </tr>
+                            <!-- Sana qatori -->
+                            <tr>
+                                <th class="is-col">F.I.SH</th>
+                                {% for d in all_dates %}
+                                <th class="{% if d == today %}header-today{% endif %} text-center">
+                                    <div style="opacity: 0.6; font-size: 10px; margin-bottom: 2px;">
+                                        {% if d.weekday == 0 %}DU{% elif d.weekday == 1 %}SE{% elif d.weekday == 2 %}CH
+                                        {% elif d.weekday == 3 %}PA{% elif d.weekday == 4 %}JU{% elif d.weekday == 5 %}SH
+                                        {% else %}YA{% endif %}
+                                    </div>
+                                    <div style="font-size: 16px;">{{ d.day }}</div>
+                                </th>
+                                {% endfor %}
+                                <th class="pct-col text-center">Jami</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in matrix_data %}
+                            <tr>
+                                <td class="is-col">
+                                    <span class="student-name-text">{{ row.student }}</span>
+                                </td>
+                                {% for item in row.attendances %}
+                                <td class="attendance-cell {% if item.date > today %}future-date{% endif %} {% if item.date == today %}is-today{% endif %} text-center"
+                                    data-student="{{ row.student.pk }}" 
+                                    data-date="{{ item.date|date:'Y-m-d' }}" 
+                                    data-status="{{ item.status|default:'' }}"
+                                    data-group="{{ group.pk }}">
+                                    <div class="att-status-circle {% if item.status == 'present' %}att-present{% elif item.status == 'absent' %}att-absent{% else %}att-empty{% endif %}">
+                                        {% if item.status == 'present' %}
+                                            <i class="fas fa-check"></i>
+                                        {% elif item.status == 'absent' %}
+                                            <i class="fas fa-times"></i>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                {% endfor %}
+                                <td class="pct-col text-center">
+                                    <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
+                                        <div style="display:flex; gap:6px; font-size:13px; font-weight:700;">
+                                            <span style="color:var(--att-green);">{{ row.present_count }}</span>
+                                            <span style="color:var(--text-muted); font-weight:400;">/</span>
+                                            <span style="color:var(--att-red);">{{ row.absent_count }}</span>
+                                        </div>
+                                        <div style="font-size:11px; color:var(--primary); font-weight:700;">{{ row.percentage }}%</div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="grades_tab" class="tab-content">
+            <div class="card-custom">
+                <div class="card-header-custom">
+                    <h5 class="mb-0"><i class="fas fa-graduation-cap me-2" style="color:#3b82f6;"></i>O'quvchilar baholari</h5>
+                </div>
+                <div class="card-body-custom p-5 text-center">
+                    <div class="empty-state">
+                        <div class="empty-icon blue"><i class="fas fa-graduation-cap"></i></div>
+                        <h4>Baho bo'limi</h4>
+                        <p>Ushbu bo'lim ishlab chiqilmoqda...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="notes_tab" class="tab-content">
+            <div class="card-custom">
+                <div class="card-header-custom">
+                    <h5 class="mb-0"><i class="fas fa-sticky-note me-2" style="color:#f59e0b;"></i>Eslatmalar</h5>
+                </div>
+                <div class="card-body-custom p-5 text-center">
+                    <div class="empty-state">
+                        <div class="empty-icon amber"><i class="fas fa-sticky-note"></i></div>
+                        <h4>Eslatmalar bo'limi</h4>
+                        <p>Ushbu bo'lim ishlab chiqilmoqda...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="exams_tab" class="tab-content">
+            <div class="card-custom">
+                <div class="card-header-custom">
+                    <h5 class="mb-0"><i class="fas fa-flag me-2" style="color:#ef4444;"></i>Imtixon natijalari</h5>
+                </div>
+                <div class="card-body-custom p-5 text-center">
+                    <div class="empty-state">
+                        <div class="empty-icon red"><i class="fas fa-flag"></i></div>
+                        <h4>Imtixonlar bo'limi</h4>
+                        <p>Ushbu bo'lim ishlab chiqilmoqda...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="discounts_tab" class="tab-content">
+            <div class="card-custom">
+                <div class="card-header-custom">
+                    <h5 class="mb-0"><i class="fas fa-percent me-2" style="color:#22c55e;"></i>Guruh chegirmalari</h5>
+                </div>
+                <div class="card-body-custom p-5 text-center">
+                    <div class="empty-state">
+                        <div class="empty-icon green"><i class="fas fa-percent"></i></div>
+                        <h4>Chegirmalar bo'limi</h4>
+                        <p>Ushbu bo'lim ishlab chiqilmoqda...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Tabs Styling */
+.tabs-container {
+    border-bottom: 2px solid var(--border-subtle);
+    overflow: hidden;
+}
+.tabs-scroll {
+    display: flex;
+    gap: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+.tabs-scroll::-webkit-scrollbar {
+    display: none;
+}
+.tab-btn {
+    padding: 12px 24px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+    letter-spacing: 0.5px;
+}
+.tab-btn i {
+    font-size: 16px;
+    opacity: 0.7;
+}
+.tab-btn:hover {
+    color: var(--primary);
+}
+.tab-btn.active {
+    color: var(--primary);
+}
+.tab-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: var(--primary);
+    border-radius: 3px 3px 0 0;
+    box-shadow: 0 -2px 10px rgba(99, 102, 241, 0.4);
+}
+
+/* Content Management */
+.tab-content {
+    display: none;
+}
+.tab-content.active {
+    display: block;
+    animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.empty-icon.purple { background: rgba(168, 85, 247, 0.1); color: #a855f7; }
+.empty-icon.blue { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+.empty-icon.amber { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+.empty-icon.red { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+.empty-icon.green { background: rgba(34, 197, 94, 0.1); color: #22c55e; }
+</style>
+
+<script>
+function switchTab(evt, tabId) {
+    // Hide all contents
+    const contents = document.getElementsByClassName("tab-content");
+    for (let i = 0; i < contents.length; i++) {
+        contents[i].classList.remove("active");
+    }
+
+    // Deactivate all buttons
+    const buttons = document.getElementsByClassName("tab-btn");
+    for (let i = 0; i < buttons.length; i++) {
+        buttons[i].classList.remove("active");
+    }
+
+    // Show current tab and activate button
+    document.getElementById(tabId).classList.add("active");
+    evt.currentTarget.classList.add("active");
+
+    // Save active tab to localStorage (optional)
+    localStorage.setItem('activeGroupTab', tabId);
+}
+
+// Restore active tab on page load
+document.addEventListener("DOMContentLoaded", function() {
+    const savedTab = localStorage.getItem('activeGroupTab');
+    if (savedTab && document.getElementById(savedTab)) {
+        // Find corresponding button
+        const buttons = document.getElementsByClassName("tab-btn");
+        for (let btn of buttons) {
+            if (btn.getAttribute('onclick').includes(savedTab)) {
+                btn.click();
+                break;
+            }
+        }
+    }
+});
+</script>
+
+<script>
+    window.attendanceConfig = {
+        isStudent: {% if user.is_student %}true{% else %}false{% endif %},
+        updateUrl: '{% url "attendance:attendance_update_ajax" %}',
+        csrfToken: '{{ csrf_token }}'
+    };
+    window.sessionTopicMap = {
+        {% for date_str, sess in session_map.items %}
+        "{{ date_str }}": "{{ sess.topic|escapejs }}",
+        {% endfor %}
+    };
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    if (!window.attendanceConfig) return;
+    
+    console.log('Attendance script initialized');
+
+    // Attendance Toggle Logic
+    document.querySelectorAll('.attendance-cell[data-student]:not(.future-date)').forEach(cell => {
+        cell.addEventListener('click', function() {
+            if (window.attendanceConfig.isStudent) return;
+            
+            const studentId = this.dataset.student;
+            const date = this.dataset.date;
+            const groupId = this.dataset.group;
+            let status = this.dataset.status;
+
+            const statuses = ['', 'present', 'absent'];
+            let nextIndex = (statuses.indexOf(status) + 1) % statuses.length;
+            const nextStatus = statuses[nextIndex];
+
+            // Optimistic update
+            const iconDiv = this.querySelector('.att-status-circle');
+            if (iconDiv) {
+                iconDiv.className = 'att-status-circle';
+                iconDiv.innerHTML = '';
+                if (nextStatus === 'present') {
+                    iconDiv.classList.add('att-present');
+                    iconDiv.innerHTML = '<i class="fas fa-check"></i>';
+                } else if (nextStatus === 'absent') {
+                    iconDiv.classList.add('att-absent');
+                    iconDiv.innerHTML = '<i class="fas fa-times"></i>';
+                } else {
+                    iconDiv.classList.add('att-empty');
+                }
+            }
+            this.dataset.status = nextStatus;
+            
+            // UI Counters update
+            const row = this.closest('tr');
+            const cells = row.querySelectorAll('td[data-status]');
+            const pctContainer = row.querySelector('.pct-col');
+            if (pctContainer) {
+                let pCount = 0, aCount = 0, total = 0;
+                cells.forEach(c => {
+                    if (c.dataset.status === 'present') { pCount++; total++; }
+                    else if (c.dataset.status === 'absent') { aCount++; total++; }
+                });
+                const greenSpan = pctContainer.querySelector('span[style*="var(--att-green)"]');
+                const redSpan = pctContainer.querySelector('span[style*="var(--att-red)"]');
+                const pctSpan = pctContainer.querySelector('div[style*="font-size:11px"]');
+                if (greenSpan) greenSpan.textContent = pCount;
+                if (redSpan) redSpan.textContent = aCount;
+                if (pctSpan) pctSpan.textContent = (total > 0 ? Math.round((pCount / total) * 100) : 0) + '%';
+            }
+
+            fetch(window.attendanceConfig.updateUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': window.attendanceConfig.csrfToken
+                },
+                body: JSON.stringify({
+                    student_id: studentId,
+                    date: date,
+                    status: nextStatus,
+                    group_id: groupId
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status !== 'success') {
+                    alert(data.message || 'Xatolik yuz berdi!');
+                    location.reload();
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('Tizim bilan bog\'lanishda xatolik yuz berdi!');
+            });
+        });
+    });
+});
+</script>
+
+<!-- Mavzu Modal -->
+{% if not user.is_student %}
+<div id="topicModal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.45); backdrop-filter:blur(4px);">
+    <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+                background:var(--bg-card); border-radius:16px; padding:28px 32px;
+                min-width:360px; max-width:480px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.25);
+                border:1px solid var(--border-subtle);">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <div style="width:36px;height:36px;background:rgba(99,102,241,0.1);border-radius:10px;
+                            display:flex;align-items:center;justify-content:center;">
+                    <i class="fas fa-book-open" style="color:var(--primary);"></i>
+                </div>
+                <div>
+                    <div style="font-weight:700; color:var(--dark); font-size:15px;">Dars mavzusi</div>
+                    <div id="topicModalDate" style="font-size:12px; color:var(--text-muted);"></div>
+                </div>
+            </div>
+            <button onclick="closeTopicModal()" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:18px;">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <textarea id="topicInput" rows="3" placeholder="Dars mavzusini yozing..."
+                  style="width:100%; border:1.5px solid var(--border-subtle); border-radius:10px;
+                         padding:10px 14px; font-size:14px; background:var(--bg-input);
+                         color:var(--dark); resize:vertical; outline:none; font-family:inherit;
+                         box-sizing:border-box;"></textarea>
+        <div style="display:flex; gap:10px; margin-top:16px; justify-content:flex-end;">
+            <button onclick="closeTopicModal()"
+                    style="padding:8px 20px; border-radius:8px; border:1.5px solid var(--border-subtle);
+                           background:transparent; color:var(--text-muted); cursor:pointer; font-size:14px;">
+                Bekor
+            </button>
+            <button id="topicSaveBtn" onclick="saveTopic()"
+                    style="padding:8px 20px; border-radius:8px; border:none;
+                           background:var(--primary); color:white; cursor:pointer;
+                           font-size:14px; font-weight:600;">
+                <i class="fas fa-check me-1"></i> Saqlash
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+let _topicDate = null;
+let _topicGroup = null;
+let _topicBtn = null;
+
+document.querySelectorAll('.topic-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        _topicDate = this.dataset.date;
+        _topicGroup = this.dataset.group;
+        _topicBtn = this;
+        // Get current topic from map
+        const existing = window.sessionTopicMap[_topicDate] || '';
+        document.getElementById('topicInput').value = existing;
+        // Format date display
+        const d = new Date(_topicDate + 'T00:00:00');
+        const opts = { day: 'numeric', month: 'long', year: 'numeric' };
+        document.getElementById('topicModalDate').textContent = d.toLocaleDateString('uz-UZ', opts) || _topicDate;
+        document.getElementById('topicModal').style.display = 'block';
+        setTimeout(() => document.getElementById('topicInput').focus(), 50);
+    });
+});
+
+// Initialize icons from server data
+document.addEventListener('DOMContentLoaded', function() {
+    const topicMap = window.sessionTopicMap || {};
+    Object.keys(topicMap).forEach(dateStr => {
+        const topic = topicMap[dateStr];
+        const icon = document.getElementById('topic-icon-' + dateStr);
+        if (icon && topic) {
+            icon.classList.add('has-topic');
+            const btn = icon.closest('.topic-btn');
+            if (btn) {
+                btn.title = topic;
+            }
+        }
+    });
+});
+
+// Close on backdrop click
+document.getElementById('topicModal').addEventListener('click', function(e) {
+    if (e.target === this) closeTopicModal();
+});
+
+// Close on Escape
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeTopicModal();
+});
+
+function closeTopicModal() {
+    document.getElementById('topicModal').style.display = 'none';
+    _topicBtn = null;
+}
+
+function saveTopic() {
+    const topic = document.getElementById('topicInput').value.trim();
+    const btn = document.getElementById('topicSaveBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Saqlanmoqda...';
+
+    fetch('{% url "attendance:update_topic_ajax" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+            group_id: _topicGroup,
+            date: _topicDate,
+            topic: topic
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status === 'success') {
+            // Update icon style
+            if (_topicBtn) {
+                const icon = _topicBtn.querySelector('.topic-icon');
+                if (topic) {
+                    icon.classList.add('has-topic');
+                    _topicBtn.dataset.topic = topic;
+                    _topicBtn.title = topic;
+                } else {
+                    icon.classList.remove('has-topic');
+                    _topicBtn.dataset.topic = '';
+                    _topicBtn.title = "Mavzu qo'shish";
+                }
+            }
+            closeTopicModal();
+        }
+    })
+    .catch(err => console.error(err))
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check me-1"></i> Saqlash';
+    });
+}
+</script>
+
+<style>
+.topic-icon { color: rgba(148,163,184,0.5); transition: color 0.2s; }
+.topic-icon.has-topic { color: var(--primary); }
+.topic-btn:hover .topic-icon { color: var(--primary); }
+</style>
+{% endif %}
+{% endblock %}

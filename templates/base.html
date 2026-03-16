@@ -1,0 +1,447 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}O'quv Markaz CRM{% endblock %}</title>
+  <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="{% static 'img/favicon.svg' %}">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <link href="{% static 'css/style.css' %}" rel="stylesheet">
+  {% block extra_css %}{% endblock %}
+  <script>
+    (function() {
+      const theme = localStorage.getItem('theme') || 'light';
+      if (theme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    })();
+  </script>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <a href="{% url 'dashboard:home' %}" class="brand-logo">
+      <div class="brand-icon">🎓</div>
+      <div class="brand-text">
+        <div class="name">O'quv Markaz</div>
+        <div class="tagline">CRM Tizim</div>
+      </div>
+    </a>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="nav-section-title">Asosiy</div>
+
+    <div class="nav-item">
+      <a href="{% url 'dashboard:home' %}" class="{% if request.resolver_match.app_name == 'dashboard' %}active{% endif %}">
+        <span class="nav-icon"><i class="fas fa-chart-pie"></i></span>
+        <span>Dashboard</span>
+      </a>
+    </div>
+
+    <div class="nav-section-title">O'quv Jarayon</div>
+
+    <div class="nav-item">
+      <a href="{% url 'students:list' %}" class="{% if request.resolver_match.app_name == 'students' %}active{% endif %}">
+        <span class="nav-icon"><i class="fas fa-user-graduate"></i></span>
+        <span>{% if user.is_student %}Mening Profilim{% else %}O'quvchilar{% endif %}</span>
+      </a>
+    </div>
+
+    {% if user.is_admin_role %}
+    <div class="nav-item">
+      <a href="{% url 'teachers:list' %}" class="{% if request.resolver_match.app_name == 'teachers' %}active{% endif %}">
+        <span class="nav-icon"><i class="fas fa-chalkboard-teacher"></i></span>
+        <span>O'qituvchilar</span>
+      </a>
+    </div>
+    {% endif %}
+
+    {% if user.is_admin_role %}
+    <div class="nav-item">
+      <a href="{% url 'courses:course_list' %}" class="{% if request.resolver_match.app_name == 'courses' and 'group' not in request.path and 'schedule' not in request.path %}active{% endif %}">
+        <span class="nav-icon"><i class="fas fa-book-open"></i></span>
+        <span>Kurslar</span>
+      </a>
+    </div>
+    {% endif %}
+
+    <div class="nav-item">
+      <a href="{% url 'courses:group_list' %}" class="{% if 'groups' in request.path and 'schedule' not in request.path %}active{% endif %}">
+        <span class="nav-icon"><i class="fas fa-users"></i></span>
+        <span>Guruhlar</span>
+      </a>
+    </div>
+
+    <div class="nav-item">
+      <a href="{% url 'courses:lesson_schedule' %}" class="{% if 'schedule' in request.path %}active{% endif %}">
+        <span class="nav-icon"><i class="fas fa-calendar-alt"></i></span>
+        <span>Dars Jadvali</span>
+      </a>
+    </div>
+
+
+    {% if not user.is_student %}
+    <div class="nav-section-title">Moliya</div>
+
+    <div class="nav-item">
+      <a href="{% url 'payments:list' %}" class="{% if request.resolver_match.app_name == 'payments' and 'debtors' not in request.path %}active{% endif %}">
+        <span class="nav-icon"><i class="fas fa-money-bill-wave"></i></span>
+        <span>To'lovlar</span>
+      </a>
+    </div>
+
+    {% if user.is_admin_role or user.is_teacher %}
+    <div class="nav-item">
+      <a href="{% url 'payments:debtors' %}" class="{% if 'debtors' in request.path %}active{% endif %}">
+        <span class="nav-icon"><i class="fas fa-exclamation-triangle"></i></span>
+        <span>Qarzdorlar</span>
+      </a>
+    </div>
+    {% endif %}
+    {% endif %}
+
+    {% if user.is_admin_role %}
+    <div class="nav-section-title">Boshqaruv</div>
+    <div class="nav-item">
+      <a href="{% url 'accounts:user_list' %}" class="{% if request.resolver_match.app_name == 'accounts' and request.path != '/accounts/profile/' %}active{% endif %}">
+        <span class="nav-icon"><i class="fas fa-shield-halved"></i></span>
+        <span>Foydalanuvchilar</span>
+      </a>
+    </div>
+    <div class="nav-item">
+      <a href="{% url 'notifications:send_mass' %}" class="{% if 'notifications' in request.path and 'list' not in request.path %}active{% endif %}">
+        <span class="nav-icon"><i class="fas fa-paper-plane"></i></span>
+        <span>Xabar yuborish</span>
+      </a>
+    </div>
+    {% endif %}
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="user-card">
+      <a href="{% url 'accounts:profile' %}" style="display:flex; align-items:center; gap:12px; text-decoration:none; color:inherit; flex-grow:1;" title="Profilga o'tish">
+        <div class="user-avatar">
+          {% if user.get_avatar_url %}
+            <img src="{{ user.get_avatar_url }}" class="avatar-img">
+          {% else %}
+            {{ user.username|first|upper }}
+          {% endif %}
+        </div>
+        <div class="user-info">
+          <div class="uname">{{ user.get_full_name|default:user.username|truncatechars:18 }}</div>
+          <div class="urole">{{ user.get_role_display }}</div>
+        </div>
+      </a>
+      <a href="{% url 'accounts:logout' %}" title="Chiqish" style="color:#94a3b8; font-size:14px;">
+        <i class="fas fa-right-from-bracket"></i>
+      </a>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN CONTENT -->
+<div class="main-wrapper">
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="d-flex align-items-center gap-3">
+      <button class="btn-icon d-lg-none" onclick="document.getElementById('sidebar').style.transform='translateX(0)'">
+        <i class="fas fa-bars"></i>
+      </button>
+      <div>
+        <div class="topbar-title">{% block page_title %}Dashboard{% endblock %}</div>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <div class="topbar-date" style="font-weight: 500; font-size: 14px;">
+        {% if upcoming_class %}
+          <i class="fas fa-bell text-primary me-1"></i>
+          <span>{{ upcoming_class.name }} ({{ upcoming_class.start_time|time:"H:i" }})</span>
+        {% else %}
+          <i class="fas fa-clock me-1"></i>
+          <span id="livetime"></span>
+        {% endif %}
+      </div>
+      <button type="button" class="btn-icon theme-toggle" id="themeToggle" title="Tema">
+        <i class="fas fa-moon"></i>
+      </button>
+
+      <!-- Notifications -->
+      <div class="nav-item dropdown px-2" id="notif-dropdown-wrapper">
+        <button class="btn-icon position-relative" type="button" data-bs-toggle="dropdown" aria-expanded="false" id="notifDropdown">
+          <i class="fas fa-bell"></i>
+          <span class="position-absolute top-10 start-100 translate-middle badge rounded-pill bg-danger" id="unread-count-badge" style="display: none; font-size: 0.65rem; padding: 0.25em 0.5em;">0</span>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg p-0 overflow-hidden" style="width: 320px; border-radius: 16px; background: var(--bg-card); margin-top: 15px;">
+          <li class="p-3 border-bottom d-flex justify-content-between align-items-center" style="background: rgba(var(--primary-rgb), 0.05);">
+            <h6 class="mb-0 fw-bold" style="color: var(--text-heading);">Xabarnomalar</h6>
+            <a href="{% url 'notifications:list' %}" class="text-primary text-decoration-none small fw-semibold">Barchasi</a>
+          </li>
+          <div id="notification-items" style="max-height: 380px; overflow-y: auto;">
+             <li class="p-4 text-center text-muted small">Yuklanmoqda...</li>
+          </div>
+          <li class="p-2 border-top text-center" style="background: var(--bg-hover);">
+             <button onclick="markAllRead()" class="btn btn-sm btn-link text-decoration-none text-muted small">Hammasini o'qildi deb belgilash</button>
+          </li>
+        </ul>
+      </div>
+      {% if user.is_admin_role %}
+      <a href="{% url 'payments:create' %}" class="btn-primary-custom d-none d-md-inline-flex">
+        <i class="fas fa-plus"></i> To'lov
+      </a>
+      <a href="{% url 'students:create' %}" class="btn-outline-custom d-none d-md-inline-flex">
+        <i class="fas fa-user-plus"></i> O'quvchi
+      </a>
+      {% endif %}
+    </div>
+  </header>
+
+  <!-- PAGE CONTENT -->
+  <div class="content-area fade-in">
+    {% block content %}{% endblock %}
+  </div>
+</div>
+
+<!-- DELETE CONFIRMATION MODAL -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+      <div class="modal-body text-center p-5">
+        <div class="mb-4" style="width: 80px; height: 80px; background: rgba(239, 68, 68, 0.1); color: var(--danger); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; margin: 0 auto;">
+          <i class="fas fa-trash-alt"></i>
+        </div>
+        <h4 class="mb-2" style="font-weight: 700; color: var(--text-heading);">Haqiqatan ham o'chirilsinmi?</h4>
+        <p class="text-muted mb-4" id="deleteModalMessage" style="color: var(--text-muted) !important;">Siz <strong id="deleteTargetName">ushbu elementni</strong> doimiy o'chirib tashlamoqchimisiz? Bu amalni bekor qilib bo'lmaydi.</p>
+        
+        <form id="deleteConfirmForm" method="POST">
+          {% csrf_token %}
+          <div class="d-flex gap-3 justify-content-center">
+            <button type="button" class="btn-outline-custom" data-bs-dismiss="modal" style="min-width: 120px;">Bekor qilish</button>
+            <button type="submit" class="btn btn-danger" style="background: var(--danger); border: none; border-radius: 10px; padding: 10px 24px; font-weight: 600; min-width: 140px;">
+              <i class="fas fa-trash-alt me-2"></i> Ha, o'chirish
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST NOTIFICATIONS -->
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index:2000;">
+  {% if messages %}
+    {% for message in messages %}
+    <div class="toast align-items-center text-bg-primary border-0 mb-2" role="alert" aria-live="assertive"
+         aria-atomic="true" data-bs-delay="5000">
+      <div class="d-flex">
+        <div class="toast-body">
+          {{ message }}
+        </div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+                aria-label="Close"></button>
+      </div>
+    </div>
+    {% endfor %}
+  {% endif %}
+  {% block extra_toasts %}{% endblock %}
+</div>
+
+<!-- BIRTHDAY CELEBRATION MODAL -->
+{% if user_birthday_today %}
+<div class="modal fade" id="birthdayModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg text-center p-4" style="border-radius: 24px; background: linear-gradient(135deg, var(--bg-card), var(--bg-main));">
+      <div class="modal-body">
+        <div class="mb-4" style="font-size: 64px;">🎂</div>
+        <h2 style="font-weight: 800; color: var(--primary); margin-bottom: 16px;">Tug'ilgan kuningiz muborak!</h2>
+        <p style="color: var(--text-body); font-size: 16px; margin-bottom: 24px;">
+            Hurmatli <strong>{{ user.get_full_name|default:user.username }}</strong>, o'quv markazimiz jamoasi sizni bugungi shodiyonangiz bilan chin qalbimizdan tabriklaydi! 🎊
+        </p>
+        <button type="button" class="btn-primary-custom px-5" data-bs-dismiss="modal">Rahmat! ❤️</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+  // Theme toggle
+  const themeToggle = document.getElementById('themeToggle');
+  
+  if (localStorage.getItem('theme') === 'dark') {
+    document.body.classList.add('dark');
+  } else {
+    document.body.classList.remove('dark');
+  }
+  function updateThemeIcon() {
+    const icon = themeToggle.querySelector('i');
+    if (document.body.classList.contains('dark')) {
+      icon.classList.remove('fa-moon');
+      icon.classList.add('fa-sun');
+    } else {
+      icon.classList.remove('fa-sun');
+      icon.classList.add('fa-moon');
+    }
+  }
+  updateThemeIcon();
+  themeToggle.addEventListener('click', () => {
+    document.documentElement.classList.toggle('dark');
+    document.body.classList.toggle('dark');
+    const isDark = document.body.classList.contains('dark');
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    updateThemeIcon();
+    window.dispatchEvent(new CustomEvent('themeChanged', { detail: { theme: isDark ? 'dark' : 'light' } }));
+  });
+
+  // Live clock
+  function updateTime() {
+    const liveTimeEl = document.getElementById('livetime');
+    if (liveTimeEl) {
+      const now = new Date();
+      liveTimeEl.textContent =
+        now.toLocaleDateString('uz-UZ') + ' ' +
+        now.toTimeString().slice(0, 5);
+    }
+  }
+  updateTime();
+  setInterval(updateTime, 1000);
+
+  // Bootstrap toasts
+  document.querySelectorAll('.toast').forEach(el => {
+    const toast = new bootstrap.Toast(el);
+    toast.show();
+  });
+
+  // Deletion Modal Logic
+  const deleteConfirmModal = document.getElementById('deleteConfirmModal');
+  if (deleteConfirmModal) {
+    deleteConfirmModal.addEventListener('show.bs.modal', function (event) {
+      const button = event.relatedTarget;
+      const url = button.getAttribute('data-url');
+      const name = button.getAttribute('data-name');
+      const form = document.getElementById('deleteConfirmForm');
+      const targetNameElement = document.getElementById('deleteTargetName');
+      
+      form.action = url;
+      if (name) {
+        targetNameElement.textContent = `"${name}"`;
+      } else {
+        targetNameElement.textContent = "ushbu elementni";
+      }
+    });
+  }
+
+  // Birthday Celebration
+  {% if user_birthday_today %}
+  (function() {
+      const bdayKey = 'bday_celebrated_{{ user.id }}_{{ now|date:"Ymd" }}';
+      if (!sessionStorage.getItem(bdayKey)) {
+          const modal = new bootstrap.Modal(document.getElementById('birthdayModal'));
+          setTimeout(() => {
+              modal.show();
+              confetti({
+                  particleCount: 150,
+                  spread: 70,
+                  origin: { y: 0.6 },
+                  colors: ['#6366f1', '#a855f7', '#ec4899']
+              });
+              sessionStorage.setItem(bdayKey, 'true');
+          }, 1000);
+      }
+  })();
+  {% endif %}
+  // Notifications logic
+  function updateUnreadCount() {
+    fetch('/notifications/unread-count/')
+      .then(res => res.json())
+      .then(data => {
+        const badge = document.getElementById('unread-count-badge');
+        if (data.count > 0) {
+          badge.textContent = data.count > 9 ? '9+' : data.count;
+          badge.style.display = 'block';
+        } else {
+          badge.style.display = 'none';
+        }
+      });
+  }
+
+  function fetchRecentNotifications() {
+     const container = document.getElementById('notification-items');
+     fetch('/notifications/recent-notifications/')
+      .then(res => res.json())
+      .then(data => {
+        if (data.notifications.length === 0) {
+          container.innerHTML = '<li class="p-4 text-center text-muted small">Xabarlar yo\'q</li>';
+          return;
+        }
+        
+        let html = '';
+        data.notifications.forEach(n => {
+          html += `
+            <li class="p-3 border-bottom notification-item ${n.is_read ? '' : 'unread'}" onclick="window.location.href='/notifications/my-notifications/'" style="cursor: pointer; transition: background 0.2s;">
+              <div class="d-flex justify-content-between align-items-start mb-1">
+                <span class="fw-bold small" style="color: var(--primary);">${n.title}</span>
+                <span class="text-muted" style="font-size: 0.7rem;">${n.created_at}</span>
+              </div>
+              <div class="text-muted small text-truncate" style="font-size: 0.75rem;">${n.message}</div>
+            </li>
+          `;
+        });
+        container.innerHTML = html;
+      });
+  }
+
+  function markAllRead() {
+    fetch('/notifications/mark-all-read/', {
+        method: 'GET',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    }).then(res => res.json())
+    .then(data => {
+        if (data.status === 'success') {
+            updateUnreadCount();
+            fetchRecentNotifications();
+        }
+    });
+  }
+
+  const notifDropdown = document.getElementById('notifDropdown');
+  if (notifDropdown) {
+    notifDropdown.addEventListener('show.bs.dropdown', fetchRecentNotifications);
+  }
+
+  updateUnreadCount();
+  // Poll every 3 minutes, but pause when tab is hidden
+  let _notifInterval = setInterval(updateUnreadCount, 180000);
+  document.addEventListener('visibilitychange', function() {
+      if (document.hidden) {
+          clearInterval(_notifInterval);
+      } else {
+          updateUnreadCount();
+          _notifInterval = setInterval(updateUnreadCount, 180000);
+      }
+  });
+
+</script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+  flatpickr("input[type=time]", {
+    enableTime: true,
+    noCalendar: true,
+    dateFormat: "H:i",
+    time_24hr: true
+  });
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>
