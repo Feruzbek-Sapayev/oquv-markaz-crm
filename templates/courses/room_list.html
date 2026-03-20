@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% block title %}Xonalar{% endblock %}
+{% block page_title %}Xonalar{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <div class="page-title">Xonalar ro'yxati</div>
+        <div class="page-subtitle">O'quv markazidagi barcha xonalar</div>
+    </div>
+    {% if user.is_admin_role %}
+    <a href="{% url 'courses:room_create' %}" class="btn-primary-custom"><i class="fas fa-plus"></i> Yangi Xona</a>
+    {% endif %}
+</div>
+
+<div class="row g-4">
+    {% for room in rooms %}
+    <div class="col-md-6 col-lg-3">
+        <div class="card-custom h-100 d-flex flex-column">
+            <div class="card-body-custom" style="padding:20px; flex-grow:1; display:flex; flex-direction:column;">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div style="width:48px; height:48px; border-radius:12px; background:rgba(99, 102, 241, 0.1); color:var(--primary); display:flex; align-items:center; justify-content:center; font-size:24px;">
+                        <i class="fas fa-door-open"></i>
+                    </div>
+                    <span class="badge-custom {% if room.is_active %}badge-active{% else %}badge-inactive{% endif %}">
+                        {% if room.is_active %}Faol{% else %}Bo'sh{% endif %}
+                    </span>
+                </div>
+                
+                <h5 style="font-size:17px; font-weight:800; color:var(--text-heading); margin-bottom:4px;">{{ room.name }}</h5>
+                <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">{{ room.description|default:"Tavsif yo'q"|truncatechars:60 }}</p>
+
+                <div style="padding-top:16px; border-top:1px solid var(--border-subtle); margin-top:auto;">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:600;">Sig'imi</div>
+                        <div style="font-size:14px; font-weight:700; color:var(--text-heading);">{{ room.capacity }} o'rin</div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:600;">Guruhlar</div>
+                        <div style="font-size:14px; font-weight:700; color:var(--primary);">{{ room.groups.count }} ta</div>
+                    </div>
+                </div>
+
+                {% if user.is_admin_role %}
+                <div class="d-flex gap-2 mt-4">
+                    <a href="{% url 'courses:room_edit' room.pk %}" class="btn-outline-custom" style="flex:1; justify-content:center; padding:8px; font-size:12.5px; border-radius:10px;">
+                        <i class="fas fa-edit me-1"></i> Tahrirlash
+                    </a>
+                    <button type="button" 
+                            class="delete-btn btn-action-delete"
+                            style="width:40px; height:40px; display:flex; align-items:center; justify-content:center; border:none; border-radius:10px; cursor:pointer;"
+                            data-bs-toggle="modal"
+                            data-bs-target="#deleteConfirmModal"
+                            data-url="{% url 'courses:room_delete' room.pk %}"
+                            data-name="{{ room.name }}"
+                            title="Xonani o'chirish">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="card-custom">
+            <div class="empty-state">
+                <div class="empty-icon">🚪</div>
+                <h4>Xonalar mavjud emas</h4>
+                <p>Yangi xona qo'shing</p>
+                {% if user.is_admin_role %}
+                <a href="{% url 'courses:room_create' %}" class="btn-primary-custom mt-3">Xona qo'shish</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

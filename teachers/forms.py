@@ -5,8 +5,8 @@ from accounts.models import CustomUser
 
 
 class TeacherForm(forms.ModelForm):
-    username = forms.CharField(label="Foydalanuvchi nomi", max_length=150, required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
-    password = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control'}), required=False)
+    username = forms.CharField(label="Foydalanuvchi nomi", max_length=150, required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Masalan: jasur_teacher'}))
+    password = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': '••••••••'}), required=False)
 
     class Meta:
         model = Teacher
@@ -16,18 +16,18 @@ class TeacherForm(forms.ModelForm):
             'hired_at', 'notes'
         ]
         widgets = {
-            'last_name': forms.TextInput(attrs={'class': 'form-control'}),
-            'first_name': forms.TextInput(attrs={'class': 'form-control'}),
-            'middle_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'last_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Familiya'}),
+            'first_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ism'}),
+            'middle_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Otasining ismi'}),
             'phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+998 90 123 45 67'}),
-            'email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'example@mail.uz'}),
             'gender': forms.Select(attrs={'class': 'form-select'}),
             'birth_date': forms.DateInput(format='%Y-%m-%d', attrs={'class': 'form-control', 'type': 'date'}),
-            'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Yashash manzili...'}),
             'photo': forms.FileInput(attrs={'class': 'form-control'}),
             'status': forms.Select(attrs={'class': 'form-select'}),
             'hired_at': forms.DateInput(format='%Y-%m-%d', attrs={'class': 'form-control', 'type': 'date'}),
-            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Qo\'shimcha izohlar...'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -37,13 +37,17 @@ class TeacherForm(forms.ModelForm):
             self.fields['password'].required = True
         else:
             self.fields['username'].initial = self.instance.user.username if self.instance.user else ''
-            self.fields['username'].disabled = True
+            self.fields['username'].required = True
 
     def clean_username(self):
         username = self.cleaned_data.get('username')
-        if not self.instance.pk:
-            if CustomUser.objects.filter(username=username).exists():
-                raise forms.ValidationError("Ushbu foydalanuvchi nomi band!")
+        # Check if username is taken by any other user
+        qs = CustomUser.objects.filter(username=username)
+        if self.instance.pk and self.instance.user:
+            qs = qs.exclude(pk=self.instance.user.pk)
+            
+        if qs.exists():
+            raise forms.ValidationError("Ushbu foydalanuvchi nomi band!")
         return username
 
     def save(self, commit=True):
@@ -64,6 +68,7 @@ class TeacherForm(forms.ModelForm):
         elif teacher.user:
             # Sync info and update password if provided
             user = teacher.user
+            user.username = username
             user.first_name = teacher.first_name
             user.last_name = teacher.last_name
             user.phone = teacher.phone

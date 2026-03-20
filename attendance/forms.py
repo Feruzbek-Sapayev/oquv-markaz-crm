@@ -9,7 +9,7 @@ class AttendanceSessionForm(forms.ModelForm):
         widgets = {
             'group': forms.Select(attrs={'class': 'form-select'}),
             'date': forms.DateInput(format='%Y-%m-%d', attrs={'class': 'form-control', 'type': 'date'}),
-            'topic': forms.TextInput(attrs={'class': 'form-control'}),
+            'topic': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Dars mavzusi, masalan: Past Simple'}),
         }
 
 
@@ -19,6 +19,6 @@ AttendanceFormSet = forms.modelformset_factory(
     extra=0,
     widgets={
         'status': forms.Select(attrs={'class': 'form-select form-select-sm'}),
-        'notes': forms.TextInput(attrs={'class': 'form-control form-control-sm'}),
+        'notes': forms.TextInput(attrs={'class': 'form-control form-control-sm', 'placeholder': 'Izoh...'}),
     }
 )

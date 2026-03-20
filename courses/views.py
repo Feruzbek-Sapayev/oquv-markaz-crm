@@ -4,15 +4,15 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Q
 from django.core.paginator import Paginator
-from .models import Course, Group, Enrollment, Exam
-from .forms import CourseForm, GroupForm, EnrollmentForm
+from .models import Course, Room, Group, Enrollment, Exam, GroupDiscount
+from .forms import CourseForm, RoomForm, GroupForm, EnrollmentForm, ExamForm, GroupDiscountForm, EnrollmentUpdateForm
 from accounts.permissions import admin_required, teacher_required
 import openpyxl
 from django.http import HttpResponse
 import datetime
 import calendar
 from django.utils import timezone
-from attendance.models import Attendance, AttendanceSession
+from attendance.models import Attendance, AttendanceSession, DailyGrade
 
 
 # ──────────── COURSES ────────────
@@ -73,6 +73,54 @@ def course_delete(request, pk):
     return render(request, 'courses/confirm_delete.html', {'obj': course, 'title': 'Kursni o\'chirish'})
 
 
+# ──────────── ROOMS ────────────
+@login_required
+def room_list(request):
+    rooms = Room.objects.all()
+    return render(request, 'courses/room_list.html', {'rooms': rooms})
+
+@admin_required
+def room_create(request):
+    if request.method == 'POST':
+        form = RoomForm(request.POST)
+        if form.is_valid():
+            room = form.save()
+            messages.success(request, f"'{room.name}' xonasi saqlandi!")
+            return redirect('courses:room_list')
+    else:
+        form = RoomForm()
+    return render(request, 'courses/room_form.html', {
+        'form': form, 
+        'title': 'Yangi xona'
+    })
+
+@admin_required
+def room_edit(request, pk):
+    room = get_object_or_404(Room, pk=pk)
+    if request.method == 'POST':
+        form = RoomForm(request.POST, instance=room)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Xona ma'lumotlari yangilandi!")
+            return redirect('courses:room_list')
+    else:
+        form = RoomForm(instance=room)
+    return render(request, 'courses/room_form.html', {
+        'form': form, 
+        'title': 'Tahrirlash', 
+        'obj': room
+    })
+
+@admin_required
+def room_delete(request, pk):
+    room = get_object_or_404(Room, pk=pk)
+    if request.method == 'POST':
+        room.delete()
+        messages.success(request, 'Xona o\'chirildi!')
+        return redirect('courses:room_list')
+    return render(request, 'courses/confirm_delete.html', {'obj': room, 'title': 'Xonani o\'chirish'})
+
+
 # ──────────── GROUPS ────────────
 @login_required
 def group_list(request):
@@ -111,7 +159,17 @@ def group_detail(request, pk):
             messages.error(request, "Siz ushbu guruhga a'zo emassiz!")
             return redirect('courses:group_list')
 
-    enrollments = group.enrollments.filter(is_active=True).select_related('student').order_by('student__last_name')
+    # Specific ordering: 1. Active, 2. Inactive, 3. Graduated
+    from django.db.models import Case, When, Value, IntegerField
+    enrollments = group.enrollments.select_related('student').annotate(
+        status_order=Case(
+            When(status=Enrollment.Status.ACTIVE, then=Value(1)),
+            When(status=Enrollment.Status.INACTIVE, then=Value(2)),
+            When(status=Enrollment.Status.GRADUATED, then=Value(3)),
+            default=Value(4),
+            output_field=IntegerField(),
+        )
+    ).order_by('status_order', 'student__last_name')
 
     # Attendance Matrix Logic
     today = timezone.now().date()
@@ -172,6 +230,17 @@ def group_detail(request, pk):
         if sid not in attendance_map: attendance_map[sid] = {}
         attendance_map[sid][d] = s
         
+    # Grade Records Logic
+    grade_records = DailyGrade.objects.filter(
+        session__group=group, session__date__range=[start_date, end_date]
+    ).values('student_id', 'session__date', 'score')
+    
+    grade_map = {}
+    for r in grade_records:
+        sid, d, s = r['student_id'], r['session__date'], r['score']
+        if sid not in grade_map: grade_map[sid] = {}
+        grade_map[sid][d] = s
+
     matrix_data = []
     total_present = 0
     total_absent = 0
@@ -179,10 +248,12 @@ def group_detail(request, pk):
     
     for e in enrollments:
         student_atts = []
+        student_grades = []
         present_count = 0
         absent_count = 0
         total_with_status = 0
         for d in all_dates:
+            # Attendance
             status = attendance_map.get(e.student.pk, {}).get(d)
             student_atts.append({'date': d, 'status': status})
             if status:
@@ -195,11 +266,16 @@ def group_detail(request, pk):
                     absent_count += 1
                     total_absent += 1
                     total_records += 1
+            
+            # Grades
+            score = grade_map.get(e.student.pk, {}).get(d)
+            student_grades.append({'date': d, 'score': score})
         
         percent = (present_count / total_with_status * 100) if total_with_status else 0
         matrix_data.append({
             'student': e.student,
             'attendances': student_atts,
+            'grades': student_grades,
             'present_count': present_count,
             'absent_count': absent_count,
             'percentage': round(percent),
@@ -243,6 +319,20 @@ def group_detail(request, pk):
         date__month=next_month
     ).exists()
 
+    # Discount Logic
+    month_choices = []
+    curr = datetime.date(group.start_date.year, group.start_date.month, 1)
+    for _ in range(group.course.duration_months):
+        month_choices.append((f"{curr.month}-{curr.year}", f"{UZ_MONTHS[curr.month]} {curr.year}"))
+        if curr.month == 12: curr = datetime.date(curr.year + 1, 1, 1)
+        else: curr = datetime.date(curr.year, curr.month + 1, 1)
+
+    enrollment_form = EnrollmentForm(group=group)
+
+    discount_form = GroupDiscountForm(group=group)
+    
+    discounts = GroupDiscount.objects.filter(enrollment__group=group).select_related('enrollment__student')
+
     return render(request, 'courses/group_detail.html', {
         'group': group,
         'enrollments': enrollments,
@@ -263,11 +353,60 @@ def group_detail(request, pk):
         'session_months': session_months,
         'has_next_sessions': has_next_sessions,
         'session_map': session_map,
+        'enrollment_form': enrollment_form,
+        'discount_form': discount_form,
+        'discounts': discounts,
         'full_uz_months': [
             (1, 'Yanvar'), (2, 'Fevral'), (3, 'Mart'), (4, 'Aprel'), (5, 'May'), (6, 'Iyun'),
             (7, 'Iyul'), (8, 'Avgust'), (9, 'Sentabr'), (10, 'Oktabr'), (11, 'Noyabr'), (12, 'Dekabr')
         ],
     })
+
+@login_required
+def discount_create(request):
+    if request.method == 'POST':
+        # First, try to get enrollment to know how to filter month choices
+        enrollment_id = request.POST.get('enrollment')
+        if not enrollment_id:
+            messages.error(request, "O'quvchi tanlanmagan!")
+            return redirect('courses:group_list')
+            
+        enrollment = get_object_or_404(Enrollment, pk=enrollment_id)
+        group = enrollment.group
+        
+        # Populate month choices same way as in detail view
+        month_choices = []
+        curr = datetime.date(group.start_date.year, group.start_date.month, 1)
+        for _ in range(group.course.duration_months):
+            month_choices.append((f"{curr.month}-{curr.year}", f"{curr.month}-{curr.year}")) # val doesn't matter for label here
+            if curr.month == 12: curr = datetime.date(curr.year + 1, 1, 1)
+            else: curr = datetime.date(curr.year, curr.month + 1, 1)
+            
+        form = GroupDiscountForm(request.POST)
+        form.fields['month_year'].choices = month_choices # Set valid choices for validation
+        
+        if form.is_valid():
+            discount = form.save(commit=False)
+            my = form.cleaned_data['month_year'].split('-')
+            discount.month = int(my[0])
+            discount.year = int(my[1])
+            discount.save()
+            messages.success(request, f"{discount.enrollment.student} uchun chegirma saqlandi!")
+            return redirect('courses:group_detail', pk=group.pk)
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{field}: {error}")
+            return redirect('courses:group_detail', pk=group.pk)
+    return redirect('courses:group_list')
+
+@login_required
+def discount_delete(request, pk):
+    discount = get_object_or_404(GroupDiscount, pk=pk)
+    group_pk = discount.enrollment.group.pk
+    discount.delete()
+    messages.success(request, "Chegirma o'chirildi!")
+    return redirect('courses:group_detail', pk=group_pk)
 
 
 @admin_required
@@ -315,7 +454,6 @@ def group_delete(request, pk):
     return render(request, 'courses/confirm_delete.html', {'obj': group, 'title': 'Guruhni o\'chirish'})
 
 
-# ──────────── ENROLLMENTS ────────────
 @teacher_required
 def enrollment_create(request, group_pk):
     group = get_object_or_404(Group, pk=group_pk)
@@ -323,6 +461,7 @@ def enrollment_create(request, group_pk):
     if not request.user.is_admin_role and group.teacher.user != request.user:
         messages.error(request, "Faqat o'zingizning guruhlaringizga o'quvchi qo'shishingiz mumkin!")
         return redirect('courses:group_list')
+        
     if request.method == 'POST':
         form = EnrollmentForm(request.POST, group=group)
         if form.is_valid():
@@ -331,10 +470,42 @@ def enrollment_create(request, group_pk):
             enrollment.save()
             messages.success(request, f"{enrollment.student} guruhga qo'shildi!")
             return redirect('courses:group_detail', pk=group_pk)
-    else:
-        form = EnrollmentForm(group=group)
-    return render(request, 'courses/enrollment_form.html', {'form': form, 'group': group})
+        else:
+            for field, errors in form.errors.items():
+                for dict_err in errors:
+                    messages.error(request, f"{field}: {dict_err}")
+    return redirect('courses:group_detail', pk=group_pk)
 
+
+@teacher_required
+def enrollment_edit(request, pk):
+    enrollment = get_object_or_404(Enrollment, pk=pk)
+    group_pk = enrollment.group.pk
+    
+    if not request.user.is_admin_role and enrollment.group.teacher.user != request.user:
+        messages.error(request, "Faqat o'zingizning guruhlaringizdagi o'quvchilarni tahrirlashingiz mumkin!")
+        return redirect('courses:group_detail', pk=group_pk)
+        
+    if request.method == 'POST':
+        form = EnrollmentUpdateForm(request.POST, instance=enrollment)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"{enrollment.student} ma'lumotlari yangilandi!")
+            return redirect('courses:group_detail', pk=group_pk)
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{field or ''}: {error}")
+            return redirect('courses:group_detail', pk=group_pk)
+    else:
+        form = EnrollmentUpdateForm(instance=enrollment)
+    
+    return render(request, 'courses/enrollment_form.html', {
+        'form': form,
+        'group': enrollment.group,
+        'enrollment': enrollment,
+        'title': "O'quvchi ma'lumotlarini tahrirlash"
+    })
 
 @teacher_required
 def enrollment_remove(request, pk):
@@ -345,9 +516,8 @@ def enrollment_remove(request, pk):
         messages.error(request, "Faqat o'zingizning guruhlaringizdan o'quvchi chiqarishingiz mumkin!")
         return redirect('courses:group_detail', pk=group_pk)
     if request.method == 'POST':
-        enrollment.is_active = False
-        enrollment.save()
-        messages.success(request, "O'quvchi guruhdan chiqarildi!")
+        enrollment.delete() # Real delete if requested, or keep status based
+        messages.success(request, "O'quvchi guruhdan o'chirildi!")
     return redirect('courses:group_detail', pk=group_pk)
 
 
@@ -364,6 +534,7 @@ def group_export_excel(request, pk):
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     response['Content-Disposition'] = f'attachment; filename=group_{group.name}.xlsx'
     wb.save(response)
+    return response
 @login_required
 def lesson_schedule(request):
     # Determine which groups to show based on role
@@ -417,26 +588,58 @@ def lesson_schedule(request):
     for day in schedule:
         schedule[day].sort(key=lambda x: x.start_time)
         
-    # Room-based schedule for "Smart Room View"
-    rooms = Group.objects.filter(is_active=True).values_list('room', flat=True).distinct()
-    rooms = [r for r in rooms if r] # Remove empty
+    # Room-based schedule for unified view with aligned rows
+    room_objs = list(Room.objects.filter(is_active=True).order_by('name'))
     
-    room_data = {room: {day[1]: [] for day in days_map} for room in rooms}
-    for group in groups:
-        if not group.room: continue
-        if group.days == Group.DayChoices.ODD:
-            for d in ['Dushanba', 'Chorshanba', 'Juma']: room_data[group.room][d].append(group)
-        elif group.days == Group.DayChoices.EVEN:
-            for d in ['Seshanba', 'Payshanba', 'Shanba']: room_data[group.room][d].append(group)
-        elif group.days == Group.DayChoices.DAILY:
-            for d in room_data[group.room]: room_data[group.room][d].append(group)
-        elif group.days == Group.DayChoices.WEEKEND:
-            for d in ['Shanba', 'Yakshanba']: room_data[group.room][d].append(group)
+    room_data_list = []
+    
+    def get_group_schedule(group):
+        """Returns a list of 7 items (group or None) for each day."""
+        sched = []
+        for d_info in days_map:
+            day_name = d_info[1]
+            has_lesson = False
+            if group.days == Group.DayChoices.ODD:
+                has_lesson = day_name in ['Dushanba', 'Chorshanba', 'Juma']
+            elif group.days == Group.DayChoices.EVEN:
+                has_lesson = day_name in ['Seshanba', 'Payshanba', 'Shanba']
+            elif group.days == Group.DayChoices.DAILY:
+                has_lesson = True
+            elif group.days == Group.DayChoices.WEEKEND:
+                has_lesson = day_name in ['Shanba', 'Yakshanba']
+            
+            sched.append(group if has_lesson else None)
+        return sched
+
+    for room in room_objs:
+        groups_in_room = [g for g in groups if g.room == room]
+        groups_in_room.sort(key=lambda x: x.start_time)
+        
+        rows = []
+        for g in groups_in_room:
+            rows.append({
+                'group': g,
+                'days_schedule': get_group_schedule(g)
+            })
+        room_data_list.append({
+            'room': room,
+            'rows': rows
+        })
+
+    # Groups without a room
+    no_room_groups = [g for g in groups if not g.room]
+    no_room_groups.sort(key=lambda x: x.start_time)
+    no_room_rows = []
+    for g in no_room_groups:
+        no_room_rows.append({
+            'group': g,
+            'days_schedule': get_group_schedule(g)
+        })
 
     context = {
-        'schedule': schedule, 
-        'room_data': room_data,
-        'rooms': rooms,
+        'room_data_list': room_data_list,
+        'no_room_rows': no_room_rows,
+        'days': [day[1] for day in days_map],
         'title': 'Dars Jadvali'
     }
     return render(request, 'courses/schedule.html', context)

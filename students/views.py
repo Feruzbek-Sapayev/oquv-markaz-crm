@@ -29,14 +29,15 @@ def add_exam(request, student_id):
 
 @login_required
 def student_list(request):
+    if request.user.role == 'student' and hasattr(request.user, 'student_profile'):
+        return redirect('students:detail', pk=request.user.student_profile.pk)
+    
     if request.user.is_admin_role:
         students = Student.objects.all()
     elif request.user.is_teacher:
         students = Student.objects.filter(enrollments__group__teacher__user=request.user).distinct()
     else:
-        messages.error(request, "Sizda o'quvchilar ro'yxatini ko'rish huquqi yo'q!")
         return redirect('dashboard:home')
-
     query = request.GET.get('q', '')
     status = request.GET.get('status', '')
     course_id = request.GET.get('course', '')

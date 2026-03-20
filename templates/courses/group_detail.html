@@ -62,6 +62,7 @@
         padding: 16px 20px;
         background: var(--bg-card);
         border-top: 1px solid var(--border-subtle);
+        justify-content: center;
     }
     .action-btn {
         width: 42px;
@@ -107,37 +108,6 @@
     </div>
 </div>
 
-<div class="row g-4 mb-4">
-    <div class="col-md-3">
-        <div class="stat-card">
-            <div class="stat-icon purple"><i class="fas fa-users"></i></div>
-            <div class="stat-value">{{ group.student_count }}</div>
-            <div class="stat-label">O'quvchilar / {{ group.max_students }}</div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="stat-card">
-            <div class="stat-icon blue"><i class="fas fa-clock"></i></div>
-            <div class="stat-value" style="font-size:20px;">{{ group.start_time|time:"H:i" }}</div>
-            <div class="stat-label">Boshlanish vaqti</div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="stat-card">
-            <div class="stat-icon green"><i class="fas fa-money-bill-wave"></i></div>
-            <div class="stat-value" style="font-size:18px;">{{ group.course.monthly_fee|money_format }}</div>
-            <div class="stat-label">Oylik to'lov (so'm)</div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="stat-card">
-            <div class="stat-icon amber"><i class="fas fa-id-card"></i></div>
-            <div class="stat-value">{% if group.room %}{{ group.room }}{% else %}---{% endif %}</div>
-            <div class="stat-label">Dars xonasi</div>
-        </div>
-    </div>
-</div>
-
 <div class="row g-4 align-items-start">
     <div class="col-lg-4">
         <!-- Guruh Ma'lumotlari -->
@@ -171,6 +141,11 @@
                 {% if group.room %}
                     {% include "includes/_info_row.html" with icon="fa-door-open" label="Xona" value=group.room %}
                 {% endif %}
+                
+                {% include "includes/_info_row.html" with icon="fa-money-bill-wave" label="Oylik to'lov" value=group.course.monthly_fee|money_format|add:" so'm" %}
+                {% with scount=group.student_count|stringformat:"s" smax=group.max_students|stringformat:"s" %}
+                {% include "includes/_info_row.html" with icon="fa-users" label="O'quvchilar soni" value=scount|add:" / "|add:smax %}
+                {% endwith %}
 
                 <!-- Integrated Teacher Section -->
                 <div style="display:flex;align-items:flex-start;gap:10px;padding:12px 22px;border-bottom:1px solid var(--border-subtle);">
@@ -204,17 +179,12 @@
                         <i class="fas fa-trash-alt"></i>
                     </a>
                     {% endif %}
-                    <a href="{% url 'notifications:send_mass' %}?group={{ group.pk }}" class="action-btn notify" title="Guruhga xabar yuborish">
+                    <a href="#" data-bs-toggle="modal" data-bs-target="#sendGroupMessageModal" class="action-btn notify" title="Guruhga xabar yuborish">
                         <i class="fas fa-comment-dots"></i>
                     </a>
-                    <a href="{% url 'courses:enrollment_create' group.pk %}" class="action-btn add-user" title="O'quvchi qo'shish">
+                    <a href="#" class="action-btn add-user" data-bs-toggle="modal"
+                        data-bs-target="#addStudentModal" title="O'quvchi qo'shish">
                         <i class="fas fa-user-plus"></i>
-                    </a>
-                    <a href="{% url 'courses:lesson_schedule' %}" class="action-btn laptop" title="Dars jadvali">
-                        <i class="fas fa-laptop"></i>
-                    </a>
-                    <a href="#" class="action-btn qr" title="QR Kod" onclick="alert('QR Kod tizimi tez kunda ishga tushadi')">
-                        <i class="fas fa-qrcode"></i>
                     </a>
                 </div>
                 {% endif %}
@@ -258,6 +228,9 @@
                         </div>
                         {% if not user.is_student %}
                         <div class="d-flex gap-2">
+                            <a href="#" data-bs-toggle="modal" data-bs-target="#addStudentModal" class="btn-primary-custom" style="padding: 10px 24px; font-size: 13px;">
+                                <i class="fas fa-user-plus"></i> O'quvchi qo'shish
+                            </a>
                             <a href="{% url 'courses:group_export' group.pk %}" class="btn-outline-custom" style="padding: 6px 14px; font-size: 13px;">
                                 <i class="fas fa-file-excel"></i> Excel
                             </a>
@@ -270,11 +243,15 @@
                         <tr>
                             <th>#</th>
                             <th>O'quvchi</th>
-                            <th>Telefon</th>
-                            <th>Chegirma</th>
+                            <th>Qo'shilgan sana</th>
                             <th>To'lov</th>
-                            <th>Qo'shildi</th>
-                            <th></th>
+                            <th>Chegirma</th>
+                            <th>Balans</th>
+                            <th>Keyingi to'lov</th>
+                            <th>Holat</th>
+                            {% if not user.is_student %}
+                            <th style="text-align:right;">Amallar</th>
+                            {% endif %}
                         </tr>
                     </thead>
                     <tbody>
@@ -283,39 +260,93 @@
                             <td style="color:var(--text-muted);">{{ forloop.counter }}</td>
                             <td>
                                 <div style="display:flex;align-items:center;gap:8px;">
-                                    <div class="avatar-circle">{{ e.student.first_name|first }}</div>
+                                    <div class="avatar-circle">
+                                        {% if e.student.photo %}
+                                            <img src="{{ e.student.photo.url }}" class="avatar-img" style="width:100%; height:100%; border-radius:inherit; object-fit:cover;">
+                                        {% else %}
+                                            {{ e.student.first_name|first }}
+                                        {% endif %}
+                                    </div>
                                     <a href="{% url 'students:detail' e.student.pk %}"
                                         style="font-weight:600;color:var(--dark);text-decoration:none;">
                                         {{ e.student }}
                                     </a>
                                 </div>
                             </td>
-                            <td style="font-size:12px;">{{ e.student.phone }}</td>
-                            <td>
-                                {% if e.discount_percent %}
-                                <span class="badge-custom badge-partial">{{ e.discount_percent }}%</span>
-                                {% else %}<span style="color:var(--text-muted);">—</span>{% endif %}
-                            </td>
-                            <td style="font-weight:600;color:var(--success);">{{ e.discounted_fee|money_format }} so'm
-                            </td>
-                            <td style="font-size:12px;color:var(--text-muted);">{{ e.enrolled_at }}</td>
-                            <td>
-                                {% if not user.is_student %}
-                                <form method="POST" action="{% url 'courses:enrollment_remove' e.pk %}"
-                                    onsubmit="return confirm('Guruhdan chiqarilsinmi?');">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-sm"
-                                        style="background:rgba(239,68,68,0.1);color:var(--danger);border:none;border-radius:6px;padding:4px 10px;"
-                                        title="Guruhdan chiqarish">
-                                        <i class="fas fa-user-minus"></i>
-                                    </button>
-                                </form>
+                            <td style="font-size:12px; color:var(--text-muted);">{{ e.enrolled_at|date:"d.m.Y" }}</td>
+                            <td style="font-weight: 700;">
+                                {% if not e.current_month_payment_details.is_active %}
+                                    <span style="color:var(--text-muted);">—</span>
+                                {% else %}
+                                    <span style="color: {% if e.current_month_payment_details.is_paid %}#10b981{% else %}#ef4444{% endif %};">
+                                        {{ e.current_month_payment_details.amount|money_format }} so'm
+                                    </span>
                                 {% endif %}
                             </td>
+                            <td style="font-weight: 700;">
+                                {% with d=e.current_month_payment_details %}
+                                    {% if d.percent > 0 or d.has_fixed %}
+                                        <span style="color:#f59e0b;">
+                                            {% if d.has_fixed %}
+                                                {{ d.discount_amount|money_format }} so'm
+                                                {% if d.percent > 0 %}<span style="font-weight:500;"> + {{ d.percent }}%</span>{% endif %}
+                                            {% else %}
+                                                {{ d.percent }}%
+                                            {% endif %}
+                                        </span>
+                                    {% else %}
+                                        <span style="color:var(--text-muted);">—</span>
+                                    {% endif %}
+                                {% endwith %}
+                            </td>
+                            <td style="font-weight:700; color:{% if e.get_balance < 0 %}var(--danger){% else %}var(--success){% endif %};">
+                                {% if e.get_balance > 0 %}+{% endif %}{{ e.get_balance|money_format }} so'm
+                            </td>
+                            <td style="font-size:12px; font-weight: 600; color: {% if e.next_payment_date < today %}var(--danger){% else %}var(--primary){% endif %};">
+                                {{ e.next_payment_date|date:"d.m.Y"|default:"—" }}
+                            </td>
+                            <td>
+                                <span style="color: {% if e.status == 'active' %}#10b981{% elif e.status == 'inactive' %}#ef4444{% else %}#f59e0b{% endif %}; font-weight: 700;">
+                                    {{ e.get_status_display }}
+                                </span>
+                            </td>
+                            {% if not user.is_student %}
+                            <td style="text-align:right;">
+                                <div class="action-dropdown">
+                                    <button class="action-dots-btn" data-menu="menu-enroll-{{ e.pk }}">
+                                        <i class="fas fa-ellipsis-vertical"></i>
+                                    </button>
+                                    <div id="menu-enroll-{{ e.pk }}" class="action-menu">
+                                        {% if user.is_admin_role or user.role == 'teacher' %}
+                                        <a href="#" class="edit-enrollment-btn" 
+                                           data-bs-toggle="modal" 
+                                           data-bs-target="#editEnrollmentModal"
+                                           data-url="{% url 'courses:enrollment_edit' e.pk %}"
+                                           data-student="{{ e.student }}"
+                                           data-status="{{ e.status }}"
+                                           data-notes="{{ e.notes }}"
+                                           onclick="document.querySelectorAll('.action-menu.open').forEach(m => m.classList.remove('open'));">
+                                            <i class="fas fa-edit"></i> Holatni o'zgartirish
+                                        </a>
+                                        {% endif %}
+                                        {% if user.is_admin_role %}
+                                        <button class="menu-danger"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#deleteConfirmModal"
+                                            data-url="{% url 'courses:enrollment_remove' e.pk %}"
+                                            data-name="{{ e.student }}"
+                                            onclick="document.querySelectorAll('.action-menu.open').forEach(m => m.classList.remove('open'));">
+                                            <i class="fas fa-trash"></i> O'chirish
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            {% endif %}
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="7">
+                            <td colspan="9">
                                 <div class="empty-state" style="padding:30px;">
                                     <div class="empty-icon">👥</div>
                                     <h4>Hech kim yo'q</h4>
@@ -326,8 +357,9 @@
                         </tr>
                         {% endfor %}
                     </tbody>
-                    </table>
-                </div>
+                </table>
+            </div>
+
             </div>
         </div>
 
@@ -355,7 +387,7 @@
                         </form>
                     </div>
 
-                    {% if not is_student %}
+                    {% if not user.is_student %}
                     <a href="{% url 'attendance:export_attendance_excel' %}?group={{ group.id }}&month={{ current_month }}&year={{ current_year }}" 
                        class="btn-outline-custom" style="padding: 6px 14px; font-size: 13px;">
                         <i class="fas fa-file-excel"></i> Excel
@@ -371,21 +403,15 @@
                                 <th class="is-col" style="font-size:12px; color:var(--text-muted); letter-spacing:0.05em;">MAVZU</th>
                                 {% for d in all_dates %}
                                 <th class="text-center" style="padding: 10px 4px;">
-                                    {% if not user.is_student %}
                                     <button class="topic-btn"
                                         data-date="{{ d|date:'Y-m-d' }}"
                                         data-group="{{ group.pk }}"
                                         style="background:none;border:none;cursor:pointer;padding:2px;"
-                                        title="Mavzu qo'shish">
+                                        title="{% if not user.is_student %}Mavzu qo'shish{% else %}Mavzuni ko'rish{% endif %}">
                                         <i class="fas fa-calendar-alt topic-icon"
                                            id="topic-icon-{{ d|date:'Y-m-d' }}"
                                            style="font-size:15px;"></i>
                                     </button>
-                                    {% else %}
-                                    <i class="fas fa-calendar-alt topic-icon"
-                                       id="topic-icon-{{ d|date:'Y-m-d' }}"
-                                       style="font-size:15px;"></i>
-                                    {% endif %}
                                 </th>
                                 {% endfor %}
                                 <th class="pct-col"></th>
@@ -447,15 +473,80 @@
 
         <div id="grades_tab" class="tab-content">
             <div class="card-custom">
-                <div class="card-header-custom">
-                    <h5 class="mb-0"><i class="fas fa-graduation-cap me-2" style="color:#3b82f6;"></i>O'quvchilar baholari</h5>
-                </div>
-                <div class="card-body-custom p-5 text-center">
-                    <div class="empty-state">
-                        <div class="empty-icon blue"><i class="fas fa-graduation-cap"></i></div>
-                        <h4>Baho bo'limi</h4>
-                        <p>Ushbu bo'lim ishlab chiqilmoqda...</p>
+                <div class="card-header-custom d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center gap-3">
+                        <h5 class="mb-0"><i class="fas fa-graduation-cap me-2" style="color:var(--primary);"></i>Kunlik baholar</h5>
+                        <form method="GET" class="d-flex align-items-center">
+                            <div class="custom-date-selector">
+                                <i class="far fa-calendar-alt"></i>
+                                <select name="month_year" class="form-select date-select" onchange="this.form.submit()" style="height:32px; font-size:12px; padding-top:4px;">
+                                    {% if session_months %}
+                                        {% for sm in session_months %}
+                                            <option value="{{ sm.value }}" {% if sm.month == current_month and sm.year == current_year %}selected{% endif %}>
+                                                {{ sm.label }}
+                                            </option>
+                                        {% endfor %}
+                                    {% else %}
+                                        <option value="{{ current_month }}-{{ current_year }}">
+                                            Sessiyalar yo'q
+                                        </option>
+                                    {% endif %}
+                                </select>
+                            </div>
+                        </form>
                     </div>
+                    {% if not user.is_student %}
+                    <a href="{% url 'attendance:export_grades_excel' %}?group={{ group.id }}&month={{ current_month }}&year={{ current_year }}" 
+                       class="btn-outline-custom" style="padding: 6px 14px; font-size: 13px;">
+                        <i class="fas fa-file-excel"></i> Excel (Baholar)
+                    </a>
+                    {% endif %}
+                </div>
+                <div class="table-container">
+                    <table class="table-matrix">
+                        <thead>
+                            <tr>
+                                <th class="is-col">F.I.SH</th>
+                                {% for d in all_dates %}
+                                <th class="text-center {% if d == today %}header-today{% endif %}">
+                                    <div style="opacity: 0.6; font-size: 10px; margin-bottom: 2px;">
+                                        {% if d.weekday == 0 %}DU{% elif d.weekday == 1 %}SE{% elif d.weekday == 2 %}CH
+                                        {% elif d.weekday == 3 %}PA{% elif d.weekday == 4 %}JU{% elif d.weekday == 5 %}SH
+                                        {% else %}YA{% endif %}
+                                    </div>
+                                    <div style="font-size: 14px;">{{ d.day }}</div>
+                                </th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in matrix_data %}
+                            <tr>
+                                <td class="is-col">
+                                    <span class="student-name-text">{{ row.student }}</span>
+                                </td>
+                                {% for item in row.grades %}
+                                <td class="grade-cell text-center" style="padding: 4px;">
+                                    <select class="grade-input grade-select {% if item.score <= 3 and item.score %}score-red{% elif item.score == 4 %}score-yellow{% elif item.score == 5 %}score-green{% endif %} {% if item.score %}has-score{% endif %}" 
+                                            onchange="updateGradeInstant(this)"
+                                            data-student="{{ row.student.pk }}" 
+                                            data-date="{{ item.date|date:'Y-m-d' }}" 
+                                            data-group="{{ group.pk }}"
+                                            {% if user.is_student %}disabled{% endif %}
+                                            style="width: 42px; height: 32px; text-align: center; text-align-last: center; border: 1.5px solid var(--border-subtle); border-radius: 8px; background: var(--bg-input); color: var(--dark); font-weight: 700; transition: all 0.2s; cursor: pointer; appearance: none; -webkit-appearance: none; padding: 0;">
+                                        <option value="">—</option>
+                                        <option value="1" {% if item.score == 1 %}selected{% endif %}>1</option>
+                                        <option value="2" {% if item.score == 2 %}selected{% endif %}>2</option>
+                                        <option value="3" {% if item.score == 3 %}selected{% endif %}>3</option>
+                                        <option value="4" {% if item.score == 4 %}selected{% endif %}>4</option>
+                                        <option value="5" {% if item.score == 5 %}selected{% endif %}>5</option>
+                                    </select>
+                                </td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -492,15 +583,124 @@
 
         <div id="discounts_tab" class="tab-content">
             <div class="card-custom">
-                <div class="card-header-custom">
-                    <h5 class="mb-0"><i class="fas fa-percent me-2" style="color:#22c55e;"></i>Guruh chegirmalari</h5>
+                <div class="card-header-custom d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-percent me-2" style="color:#22c55e;"></i>Berilgan chegirmalar</h5>
+                    {% if not user.is_student %}
+                    <button class="btn-primary-custom btn-sm" data-bs-toggle="modal" data-bs-target="#addDiscountModal">
+                        <i class="fas fa-plus me-1"></i> Chegirma qo'shish
+                    </button>
+                    {% endif %}
                 </div>
-                <div class="card-body-custom p-5 text-center">
-                    <div class="empty-state">
-                        <div class="empty-icon green"><i class="fas fa-percent"></i></div>
-                        <h4>Chegirmalar bo'limi</h4>
-                        <p>Ushbu bo'lim ishlab chiqilmoqda...</p>
+                <div style="overflow-x:auto;">
+                    <table class="table-custom">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>O'quvchi</th>
+                                <th>Oy / Yil</th>
+                                <th>Chegirma</th>
+                                <th>Izoh</th>
+                                {% if not user.is_student %}
+                                <th></th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for d in discounts %}
+                            <tr>
+                                <td style="color:var(--text-muted); font-size:12px;">{{ forloop.counter }}</td>
+                                <td>
+                                    <div style="display:flex;align-items:center;gap:10px;">
+                                        {% if d.enrollment.student.photo %}
+                                            <img src="{{ d.enrollment.student.photo.url }}" class="avatar-img" style="width:36px; height:36px; object-fit: cover; border-radius: 50%;">
+                                        {% else %}
+                                            <div class="avatar-circle">{{ d.enrollment.student.first_name|first }}</div>
+                                        {% endif %}
+                                        <span style="font-weight:600;">{{ d.enrollment.student }}</span>
+                                    </div>
+                                </td>
+                                <td>{{ d.month }}/{{ d.year }}</td>
+                                <td>
+                                    <span class="badge-custom badge-present">
+                                        {% if d.discount_type == 'percentage' %}
+                                            {{ d.percent }}%
+                                        {% else %}
+                                            {{ d.amount|money_format }}
+                                        {% endif %}
+                                    </span>
+                                </td>
+                                <td style="font-size:12px; color: var(--text-muted);">{{ d.notes }}</td>
+                                {% if not user.is_student %}
+                                <td class="text-end" style="padding-right: 20px;">
+                                    <a href="javascript:void(0)" 
+                                       class="btn-icon"
+                                       data-bs-toggle="modal" 
+                                       data-bs-target="#deleteConfirmModal"
+                                       data-url="{% url 'courses:discount_delete' d.pk %}"
+                                       data-name="{{ d.enrollment.student }} ({{ d.month }}/{{ d.year }})"
+                                       style="color: #ef4444; transition: all 0.2s; padding: 5px; text-decoration: none;" 
+                                       onmouseover="this.style.color='#b91c1c'" 
+                                       onmouseout="this.style.color='#ef4444'">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </a>
+                                </td>
+                                {% endif %}
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center py-4 text-muted">Hozircha chegirmalar mavjud emas</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        {% comment %} Modal for adding discount {% endcomment %}
+        <div class="modal fade" id="addDiscountModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content card-custom" style="border:none; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
+                    <div class="card-header-custom" style="padding: 1.5rem 2rem;">
+                        <h5 class="mb-0" style="font-weight: 700;">Yangi chegirma berish</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
+                    <form action="{% url 'courses:discount_create' %}" method="POST">
+                        {% csrf_token %}
+                        <div class="card-body-custom" style="padding: 2rem;">
+                            <div class="mb-4">
+                                <label class="form-label" style="font-weight: 600; color: #64748b; margin-bottom: 0.5rem;">O'quvchi</label>
+                                {{ discount_form.enrollment }}
+                            </div>
+                            <div class="mb-4">
+                                <label class="form-label" style="font-weight: 600; color: #64748b; margin-bottom: 0.5rem;">Qaysi oy uchun?</label>
+                                {{ discount_form.month_year }}
+                            </div>
+                            <div class="mb-4">
+                                <label class="form-label" style="font-weight: 600; color: #64748b; margin-bottom: 0.5rem;">Chegirma turi</label>
+                                {{ discount_form.discount_type }}
+                            </div>
+                            <div class="mb-4" id="percent_div">
+                                <label class="form-label" style="font-weight: 600; color: #64748b; margin-bottom: 0.5rem;">Chegirma foizi (0-100)</label>
+                                {{ discount_form.percent }}
+                            </div>
+                            <div class="mb-4" id="amount_div" style="display:none;">
+                                <label class="form-label" style="font-weight: 600; color: #64748b; margin-bottom: 0.5rem;">Chegirma summasi (so'm)</label>
+                                {{ discount_form.amount }}
+                            </div>
+                            <div class="mb-0">
+                                <label class="form-label" style="font-weight: 600; color: #64748b; margin-bottom: 0.5rem;">Izoh</label>
+                                {{ discount_form.notes }}
+                            </div>
+                        <div class="card-footer-custom d-flex justify-content-end gap-2" style="padding: 1.5rem 2rem; border-top: 1px solid var(--border-subtle);">
+                            <button type="button" class="btn-outline-custom" data-bs-dismiss="modal">
+                                Bekor qilish
+                            </button>
+                            <button type="submit" class="btn-primary-custom" style="padding: 0.6rem 2rem; border-radius: 10px; font-weight: 600;">
+                                Saqlash
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
@@ -621,6 +821,45 @@ document.addEventListener("DOMContentLoaded", function() {
 </script>
 
 <script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.action-dots-btn')) {
+            e.stopPropagation();
+            const btn = e.target.closest('.action-dots-btn');
+            const menuId = btn.getAttribute('data-menu');
+            const menu = document.getElementById(menuId);
+            const isOpen = menu.classList.contains('open');
+
+            document.querySelectorAll('.action-menu.open').forEach(m => m.classList.remove('open'));
+
+            if (!isOpen) {
+                const rect = btn.getBoundingClientRect();
+                menu.classList.add('open');
+                
+                // Position straight to the left of the button, vertically centered
+                const menuHeight = menu.offsetHeight;
+                const menuWidth = menu.offsetWidth;
+                
+                menu.style.top = (rect.top + (rect.height / 2) - (menuHeight / 2)) + 'px';
+                
+                let left = rect.left - menuWidth - 8;
+                if (left < 8) left = 8;
+                menu.style.left = left + 'px';
+                
+                requestAnimationFrame(() => {
+                    // Re-check boundaries if needed
+                    if (parseFloat(menu.style.top) < 8) menu.style.top = '8px';
+                    if (parseFloat(menu.style.top) + menuHeight > window.innerHeight - 8) {
+                        menu.style.top = (window.innerHeight - menuHeight - 8) + 'px';
+                    }
+                });
+            }
+        } else {
+            document.querySelectorAll('.action-menu.open').forEach(m => m.classList.remove('open'));
+        }
+    });
+});
+
     window.attendanceConfig = {
         isStudent: {% if user.is_student %}true{% else %}false{% endif %},
         updateUrl: '{% url "attendance:attendance_update_ajax" %}',
@@ -712,13 +951,85 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error(err);
                 alert('Tizim bilan bog\'lanishda xatolik yuz berdi!');
             });
-        });
+    });
+});
+
+});
+
+function updateGradeInstant(el) {
+    const studentId = el.dataset.student;
+    const date = el.dataset.date;
+    const groupId = el.dataset.group;
+    const score = el.value;
+
+    el.style.borderColor = 'var(--primary)';
+    el.style.opacity = '0.7';
+    
+    fetch('{% url "attendance:grade_update_ajax" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+            student_id: studentId,
+            date: date,
+            score: score,
+            group_id: groupId
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        el.style.opacity = '1';
+        if (data.status === 'success') {
+            el.style.borderColor = '#10b981';
+            
+            // Remove old score classes
+            el.classList.remove('score-red', 'score-yellow', 'score-green', 'has-score');
+            
+            if (score) {
+                el.classList.add('has-score');
+                const s = parseInt(score);
+                if (s <= 3) el.classList.add('score-red');
+                else if (s === 4) el.classList.add('score-yellow');
+                else if (s === 5) el.classList.add('score-green');
+            }
+            
+            setTimeout(() => { el.style.borderColor = 'var(--border-subtle)'; }, 1500);
+        } else {
+            alert(data.message || 'Xatolik yuz berdi!');
+            el.style.borderColor = '#ef4444';
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        el.style.opacity = '1';
+        el.style.borderColor = '#ef4444';
+        alert('Tizim bilan bog\'lanishda xatolik yuz berdi!');
+    });
+}
+</script>
+
+<script>
+// Initialize icons from server data for everyone (including students)
+document.addEventListener('DOMContentLoaded', function() {
+    const topicMap = window.sessionTopicMap || {};
+    Object.keys(topicMap).forEach(dateStr => {
+        const topic = topicMap[dateStr];
+        const icon = document.getElementById('topic-icon-' + dateStr);
+        if (icon && topic) {
+            icon.classList.add('has-topic');
+            icon.style.color = 'var(--primary)';
+            icon.title = topic; // Show topic as tooltip for everyone
+            
+            const btn = icon.closest('.topic-btn');
+            if (btn) btn.title = topic;
+        }
     });
 });
 </script>
 
 <!-- Mavzu Modal -->
-{% if not user.is_student %}
 <div id="topicModal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.45); backdrop-filter:blur(4px);">
     <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
                 background:var(--bg-card); border-radius:16px; padding:28px 32px;
@@ -739,7 +1050,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <i class="fas fa-times"></i>
             </button>
         </div>
-        <textarea id="topicInput" rows="3" placeholder="Dars mavzusini yozing..."
+        <textarea id="topicInput" rows="3" placeholder="Dars mavzusi..."
+                  {% if user.is_student %}readonly{% endif %}
                   style="width:100%; border:1.5px solid var(--border-subtle); border-radius:10px;
                          padding:10px 14px; font-size:14px; background:var(--bg-input);
                          color:var(--dark); resize:vertical; outline:none; font-family:inherit;
@@ -748,14 +1060,16 @@ document.addEventListener('DOMContentLoaded', () => {
             <button onclick="closeTopicModal()"
                     style="padding:8px 20px; border-radius:8px; border:1.5px solid var(--border-subtle);
                            background:transparent; color:var(--text-muted); cursor:pointer; font-size:14px;">
-                Bekor
+                {% if user.is_student %}Yopish{% else %}Bekor{% endif %}
             </button>
+            {% if not user.is_student %}
             <button id="topicSaveBtn" onclick="saveTopic()"
                     style="padding:8px 20px; border-radius:8px; border:none;
                            background:var(--primary); color:white; cursor:pointer;
                            font-size:14px; font-weight:600;">
                 <i class="fas fa-check me-1"></i> Saqlash
             </button>
+            {% endif %}
         </div>
     </div>
 </div>
@@ -770,40 +1084,22 @@ document.querySelectorAll('.topic-btn').forEach(btn => {
         _topicDate = this.dataset.date;
         _topicGroup = this.dataset.group;
         _topicBtn = this;
-        // Get current topic from map
         const existing = window.sessionTopicMap[_topicDate] || '';
         document.getElementById('topicInput').value = existing;
-        // Format date display
         const d = new Date(_topicDate + 'T00:00:00');
         const opts = { day: 'numeric', month: 'long', year: 'numeric' };
         document.getElementById('topicModalDate').textContent = d.toLocaleDateString('uz-UZ', opts) || _topicDate;
         document.getElementById('topicModal').style.display = 'block';
-        setTimeout(() => document.getElementById('topicInput').focus(), 50);
-    });
-});
-
-// Initialize icons from server data
-document.addEventListener('DOMContentLoaded', function() {
-    const topicMap = window.sessionTopicMap || {};
-    Object.keys(topicMap).forEach(dateStr => {
-        const topic = topicMap[dateStr];
-        const icon = document.getElementById('topic-icon-' + dateStr);
-        if (icon && topic) {
-            icon.classList.add('has-topic');
-            const btn = icon.closest('.topic-btn');
-            if (btn) {
-                btn.title = topic;
-            }
+        if (document.getElementById('topicInput').getAttribute('readonly') === null) {
+            setTimeout(() => document.getElementById('topicInput').focus(), 50);
         }
     });
 });
 
-// Close on backdrop click
 document.getElementById('topicModal').addEventListener('click', function(e) {
     if (e.target === this) closeTopicModal();
 });
 
-// Close on Escape
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') closeTopicModal();
 });
@@ -813,6 +1109,7 @@ function closeTopicModal() {
     _topicBtn = null;
 }
 
+{% if not user.is_student %}
 function saveTopic() {
     const topic = document.getElementById('topicInput').value.trim();
     const btn = document.getElementById('topicSaveBtn');
@@ -834,17 +1131,20 @@ function saveTopic() {
     .then(r => r.json())
     .then(data => {
         if (data.status === 'success') {
-            // Update icon style
             if (_topicBtn) {
                 const icon = _topicBtn.querySelector('.topic-icon');
                 if (topic) {
                     icon.classList.add('has-topic');
                     _topicBtn.dataset.topic = topic;
                     _topicBtn.title = topic;
+                    icon.title = topic;
+                    window.sessionTopicMap[_topicDate] = topic;
                 } else {
                     icon.classList.remove('has-topic');
                     _topicBtn.dataset.topic = '';
                     _topicBtn.title = "Mavzu qo'shish";
+                    icon.title = "";
+                    delete window.sessionTopicMap[_topicDate];
                 }
             }
             closeTopicModal();
@@ -856,12 +1156,182 @@ function saveTopic() {
         btn.innerHTML = '<i class="fas fa-check me-1"></i> Saqlash';
     });
 }
+{% endif %}
 </script>
 
 <style>
-.topic-icon { color: rgba(148,163,184,0.5); transition: color 0.2s; }
 .topic-icon.has-topic { color: var(--primary); }
 .topic-btn:hover .topic-icon { color: var(--primary); }
+.grade-select.has-score {
+    background: rgba(99, 102, 241, 0.08) !important;
+    border-color: rgba(99, 102, 241, 0.3) !important;
+}
+.grade-select.score-red { color: #ef4444 !important; }
+.grade-select.score-yellow { color: #f59e0b !important; }
+.grade-select.score-green { color: #10b981 !important; }
 </style>
+
+{% if not user.is_student %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const discountType = document.getElementById('id_discount_type');
+    if (discountType) {
+        const percentDiv = document.getElementById('percent_div');
+        const amountDiv = document.getElementById('amount_div');
+        function toggleInputs() {
+            if (discountType.value === 'percentage') {
+                percentDiv.style.display = 'block';
+                amountDiv.style.display = 'none';
+            } else {
+                percentDiv.style.display = 'none';
+                amountDiv.style.display = 'block';
+            }
+        }
+        discountType.addEventListener('change', toggleInputs);
+        toggleInputs();
+    }
+});
+</script>
+
+<!-- O'quvchi qo'shish modal -->
+<div class="modal fade" id="addStudentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius:16px; border:none; background:var(--bg-card); box-shadow:0 20px 40px rgba(0,0,0,0.2);">
+            <div class="modal-header" style="border-bottom: 1px solid var(--border-subtle); padding: 20px 24px;">
+                <h5 class="modal-title" style="font-weight:700; color:var(--dark); font-size:18px;">
+                    <i class="fas fa-user-plus me-2" style="color:var(--primary);"></i>O'quvchi qo'shish
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{% url 'courses:enrollment_create' group.pk %}" method="POST">
+                {% csrf_token %}
+                <div class="modal-body" style="padding: 24px;">
+                    <div class="mb-3">
+                        <label class="form-label-custom">O'quvchi <span class="required-star">*</span></label>
+                        {{ enrollment_form.student }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label-custom">Qo'shilgan sana <span class="required-star">*</span></label>
+                        {{ enrollment_form.enrolled_at }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label-custom">Holati <span class="required-star">*</span></label>
+                        {{ enrollment_form.status }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label-custom">Izoh</label>
+                        {{ enrollment_form.notes }}
+                    </div>
+                </div>
+                <div class="modal-footer" style="border-top: 1px solid var(--border-subtle); padding: 16px 24px;">
+                    <button type="button" class="btn-outline-custom" data-bs-dismiss="modal" style="margin-right:8px;">Bekor qilish</button>
+                    <button type="submit" class="btn-primary-custom" style="border:none;">
+                        <i class="fas fa-plus me-1"></i> Qo'shish
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- O'quvchi tahrirlash modal -->
+<div class="modal fade" id="editEnrollmentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius:16px; border:none; background:var(--bg-card); box-shadow:0 20px 40px rgba(0,0,0,0.2);">
+            <div class="modal-header" style="border-bottom: 1px solid var(--border-subtle); padding: 20px 24px;">
+                <h5 class="modal-title" style="font-weight:700; color:var(--dark); font-size:18px;">
+                    <i class="fas fa-user-edit me-2" style="color:var(--primary);"></i>Holatni tahrirlash
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="editEnrollmentForm" method="POST">
+                {% csrf_token %}
+                <div class="modal-body" style="padding: 24px;">
+                    <div class="mb-3">
+                        <label class="form-label-custom">O'quvchi</label>
+                        <input type="text" id="editStudentName" class="form-control text-dark" readonly style="background:var(--bg-input); border-color:var(--border-subtle); font-weight:600;">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label-custom">Holati <span class="required-star">*</span></label>
+                        <select name="status" id="editEnrollmentStatus" class="form-select">
+                            <option value="active">Faol</option>
+                            <option value="inactive">Faol emas</option>
+                            <option value="graduated">Bitirgan</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label-custom">Izoh</label>
+                        <textarea name="notes" id="editEnrollmentNotes" class="form-control" rows="3" placeholder="Izoh..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer" style="border-top: 1px solid var(--border-subtle); padding: 16px 24px;">
+                    <button type="button" class="btn-outline-custom" data-bs-dismiss="modal" style="margin-right:8px;">Bekor qilish</button>
+                    <button type="submit" class="btn-primary-custom" style="border:none;">
+                        <i class="fas fa-save me-1"></i> Saqlash
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Edit Enrollment Modal logic
+    const editModal = document.getElementById('editEnrollmentModal');
+    if (editModal) {
+        document.querySelectorAll('.edit-enrollment-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const url = this.dataset.url;
+                const student = this.dataset.student;
+                const status = this.dataset.status;
+                const notes = this.dataset.notes;
+
+                document.getElementById('editEnrollmentForm').action = url;
+                document.getElementById('editStudentName').value = student;
+                document.getElementById('editEnrollmentStatus').value = status;
+                document.getElementById('editEnrollmentNotes').value = notes;
+            });
+        });
+    }
+});
+</script>
+
+<!-- Guruhga xabar yuborish modal -->
+<div class="modal fade" id="sendGroupMessageModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius:16px; border:none; background:var(--bg-card); box-shadow:0 20px 40px rgba(0,0,0,0.2);">
+            <div class="modal-header" style="border-bottom: 1px solid var(--border-subtle); padding: 20px 24px;">
+                <h5 class="modal-title" style="font-weight:700; color:var(--dark); font-size:18px;">
+                    <i class="fas fa-comment-dots me-2" style="color:var(--primary);"></i>Guruhga xabar yuborish
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{% url 'notifications:send_group' group.pk %}" method="POST">
+                {% csrf_token %}
+                <div class="modal-body" style="padding: 24px;">
+                    <div class="mb-3">
+                        <label class="form-label-custom">Sarlavha <span class="required-star">*</span></label>
+                        <input type="text" name="title" class="form-control" required placeholder="Xabar sarlavhasi..." style="background:var(--bg-input); border-color:var(--border-subtle); border-radius:10px; padding:10px 15px;">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label-custom">Xabar <span class="required-star">*</span></label>
+                        <textarea name="message" class="form-control" rows="4" required placeholder="Xabar matnini yozing..." style="background:var(--bg-input); border-color:var(--border-subtle); border-radius:10px; padding:10px 15px;"></textarea>
+                    </div>
+                    <div class="alert alert-info py-2" style="font-size:12px; border-radius:10px; background:rgba(59,130,246,0.08); border:none; color:var(--primary);">
+                        <i class="fas fa-info-circle me-1"></i> Ushbu xabar guruhdagi barcha faol o'quvchilarga yuboriladi.
+                    </div>
+                </div>
+                <div class="modal-footer" style="border-top: 1px solid var(--border-subtle); padding: 16px 24px;">
+                    <button type="button" class="btn-outline-custom" data-bs-dismiss="modal" style="margin-right:8px;">Bekor qilish</button>
+                    <button type="submit" class="btn-primary-custom" style="border:none; padding:10px 25px;">
+                        <i class="fas fa-paper-plane me-1"></i> Yuborish
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 {% endif %}
+
 {% endblock %}

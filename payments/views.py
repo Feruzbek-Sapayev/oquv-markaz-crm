@@ -79,22 +79,41 @@ def payment_create(request):
     student_id = request.GET.get('student')
     if student_id:
         selected_student = Student.objects.filter(pk=student_id).first()
+    
+    group_id = request.GET.get('group')
+    month = request.GET.get('month')
+    year = request.GET.get('year')
     if request.method == 'POST':
         form = PaymentForm(request.POST)
         if form.is_valid():
             payment = form.save(commit=False)
             payment.created_by = request.user
-            # Auto-set expected_amount from enrollment discount
+            # Auto-set expected_amount from enrollment specific month discount
             try:
                 enrollment = Enrollment.objects.get(student=payment.student, group=payment.group, is_active=True)
-                payment.expected_amount = enrollment.discounted_fee
-            except Enrollment.DoesNotExist:
+                total_due_for_month = enrollment.get_discounted_fee_for_month(payment.month, payment.year)
+                
+                # If they pay in installments, calculate remaining for this month
+                from django.db.models import Sum
+                already_paid = Payment.objects.filter(
+                    student=payment.student, 
+                    group=payment.group, 
+                    month=payment.month, 
+                    year=payment.year
+                ).aggregate(total=Sum('amount'))['total'] or 0
+                
+                payment.expected_amount = max(0, total_due_for_month - already_paid)
+            except (Enrollment.DoesNotExist):
                 payment.expected_amount = payment.group.course.monthly_fee
             payment.save()
             messages.success(request, "To'lov qo'shildi!")
             return redirect('payments:list')
     else:
-        initial = {'student': selected_student} if selected_student else None
+        initial = {}
+        if selected_student: initial['student'] = selected_student
+        if group_id: initial['group'] = group_id
+        if month: initial['month'] = month
+        if year: initial['year'] = year
         form = PaymentForm(initial=initial)
     return render(request, 'payments/payment_form.html', {'form': form, 'title': "Yangi to'lov"})
 
@@ -125,17 +144,82 @@ def payment_delete(request, pk):
 
 @login_required
 def debtor_list(request):
-    """O'quvchilar who have unpaid or partial payments"""
+    """Identify students who have overdue payments based on grace period"""
+    from datetime import date
+    import calendar
+    from decimal import Decimal
+
+    today = timezone.now().date()
+    
     if request.user.is_admin_role:
-        payments = Payment.objects.filter(status__in=['unpaid', 'partial'])
+        enrollments = Enrollment.objects.filter(is_active=True).select_related('student', 'group__course')
     elif request.user.is_teacher:
-        payments = Payment.objects.filter(status__in=['unpaid', 'partial'], group__teacher__user=request.user).distinct()
+        enrollments = Enrollment.objects.filter(
+            is_active=True, 
+            group__teacher__user=request.user
+        ).select_related('student', 'group__course')
     else:
         messages.error(request, "Qarzdorlar ro'yxatini ko'rish huquqingiz yo'q!")
         return redirect('dashboard:home')
     
-    payments = payments.select_related('student', 'group__course').order_by('student__last_name')
-    total_debt = payments.aggregate(t=Sum('expected_amount') - Sum('amount'))['t'] or 0
+    debtor_items = []
+    total_debt_sum = 0
+
+    for e in enrollments:
+        group_start = e.group.start_date
+        # skip if group is in its first month (current month <= group start month)
+        if today.year * 12 + today.month <= group_start.year * 12 + group_start.month:
+            continue
+
+        # Start checking from enrollment month or group start month (whichever is later)
+        # Actually logic says "guruh yaratilgan oydan katta bolsa" check all students in that group.
+        # We start checking from the student's enrollment month.
+        current_date = date(e.enrolled_at.year, e.enrolled_at.month, 1)
+        
+        while current_date <= date(today.year, today.month, 1):
+            # Calculate due date for this month based on group start DAY
+            last_day = calendar.monthrange(current_date.year, current_date.month)[1]
+            due_day = min(group_start.day, last_day)
+            due_date = date(current_date.year, current_date.month, due_day)
+            
+            if today < due_date:
+                break # Not yet due for this month
+                
+            # Check payment for this month (M/Y)
+            expected = e.get_discounted_fee_for_month(current_date.month, current_date.year)
+            
+            # Aggregate all payments for this month (M/Y)
+            payments_data = Payment.objects.filter(
+                student=e.student, group=e.group,
+                month=current_date.month, year=current_date.year
+            ).aggregate(total_paid=Sum('amount'))
+            
+            paid = payments_data['total_paid'] or Decimal('0')
+            remaining = expected - paid
+            
+            if remaining > 0:
+                debtor_items.append({
+                    'pk': None,
+                    'student': e.student,
+                    'group': e.group,
+                    'month': current_date.month,
+                    'year': current_date.year,
+                    'amount': paid,
+                    'expected_amount': expected,
+                    'remaining': remaining,
+                    'status': 'partial' if paid > 0 else 'unpaid',
+                    'get_status_display': "Qisman to'langan" if paid > 0 else "To'lanmagan",
+                })
+                total_debt_sum += remaining
+            
+            # Advance to next month
+            if current_date.month == 12:
+                current_date = date(current_date.year+1, 1, 1)
+            else:
+                current_date = date(current_date.year, current_date.month+1, 1)
+
+    # Sort by student name
+    debtor_items.sort(key=lambda x: x['student'].last_name)
 
     page_size = request.GET.get('page_size', 20)
     try:
@@ -143,11 +227,22 @@ def debtor_list(request):
     except ValueError:
         page_size = 20
 
-    paginator = Paginator(payments, page_size)
+    paginator = Paginator(debtor_items, page_size)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    return render(request, 'payments/debtor_list.html', {'payments': page_obj, 'page_obj': page_obj, 'total_debt': total_debt})
+    debtor_count = len(debtor_items)
+    unpaid_count = len([x for x in debtor_items if x['status'] == 'unpaid'])
+    partial_count = len([x for x in debtor_items if x['status'] == 'partial'])
+
+    return render(request, 'payments/debtor_list.html', {
+        'payments': page_obj, 
+        'page_obj': page_obj, 
+        'total_debt': total_debt_sum,
+        'debtor_count': debtor_count,
+        'unpaid_count': unpaid_count,
+        'partial_count': partial_count,
+    })
 
 
 @login_required
@@ -176,7 +271,6 @@ def payment_pdf(request, pk):
         ["Kurs:", payment.group.course.name],
         ["Oy/Yil:", f"{payment.month}/{payment.year}"],
         ["To'lov miqdori:", f"{payment.amount:,.0f} so'm"],
-        ["Kutilgan:", f"{payment.expected_amount:,.0f} so'm"],
         ["Qoldiq:", f"{payment.remaining:,.0f} so'm"],
         ["Holat:", payment.get_status_display()],
         ["Usul:", payment.get_method_display()],
@@ -210,11 +304,11 @@ def payment_export_excel(request):
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "To'lovlar"
-    ws.append(["#", "O'quvchi", "Guruh", "Oy", "Yil", "To'lov", "Kutilgan", "Holat", "Usul", "Sana"])
+    ws.append(["#", "O'quvchi", "Guruh", "Oy", "Yil", "To'lov", "Holat", "Usul", "Sana"])
     for i, p in enumerate(payments, 1):
         ws.append([
             i, str(p.student), str(p.group), p.month, p.year,
-            float(p.amount), float(p.expected_amount),
+            float(p.amount),
             p.get_status_display(), p.get_method_display(), str(p.paid_at or '')
         ])
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')

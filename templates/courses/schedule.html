@@ -6,7 +6,7 @@
 {% block page_title %}Dars Jadvali{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/schedule.css' %}">
+<link rel="stylesheet" href="{% static 'css/schedule.css' %}?v={% now 'U' %}">
 {% endblock %}
 
 {% block content %}
@@ -22,19 +22,11 @@
     </div>
 </div>
 
-<!-- View Toggles -->
-<div class="card-custom mb-4" style="padding: 10px;">
-    <div class="d-flex gap-2">
-        <button class="btn-primary-custom" id="btn-weekly" onclick="switchView('weekly')">Haftalik Ko'rinish</button>
-        <button class="btn-outline-custom" id="btn-rooms" onclick="switchView('rooms')">Xonalar Bandligi</button>
-    </div>
-</div>
-
-<!-- Weekly View -->
+<!-- Weekly Table View -->
 <div id="weekly-view">
     <!-- Mobile Day Tabs -->
     <div class="tab-nav-mobile">
-        {% for day, lessons in schedule.items %}
+        {% for day in days %}
         <button class="tab-btn {% if forloop.first %}active{% endif %}" onclick="showDay('{{ forloop.counter }}', this)">
             {{ day }}
         </button>
@@ -42,121 +34,126 @@
     </div>
 
     <div class="timetable-wrapper">
-        <div class="timetable-grid">
-            {% for day, lessons in schedule.items %}
-            <div class="day-col {% if forloop.first %}active-day{% endif %}" id="col-{{ forloop.counter }}">
-                <div class="day-name-header" id="header-{{ forloop.counter }}">
-                    {{ day }}
-                </div>
-                <div class="lessons-container">
-                    {% if lessons %}
-                        {% for lesson in lessons %}
-                        <div class="lesson-card color-{{ lesson.id|add:0|slugify|last }}">
-                            <div class="lesson-course-name">{{ lesson.course.name }}</div>
-                            <div class="lesson-time-range">{{ lesson.start_time|time:"H:i" }} - {{ lesson.end_time|time:"H:i" }}</div>
+        <div class="table-responsive-custom" style="border-radius: 12px; overflow: hidden;">
+            <table class="schedule-table">
+                <thead>
+                    <tr>
+                        <th class="room-column-header">Xona</th>
+                        {% for day in days %}
+                        <th class="day-column-header day-col-{{ forloop.counter }}">{{ day }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for room_item in room_data_list %}
+                        {% for row in room_item.rows %}
+                        <tr>
+                            {% if forloop.first %}
+                            <td class="room-cell" rowspan="{{ room_item.rows|length }}">
+                                <div class="room-name">{{ room_item.room.name }}</div>
+                                <div class="room-cap"><i class="fas fa-users"></i> {{ room_item.room.capacity }} talik</div>
+                            </td>
+                            {% endif %}
                             
-                            <div class="lesson-meta">
-                                <span><i class="fas fa-users"></i> {{ lesson.student_count }}</span>
-                                <span>{% if lesson.room %}{{ lesson.room }}{% else %}-{% endif %} xona</span>
-                                <span><i class="fas fa-layer-group"></i> {{ lesson.name }}</span>
-                            </div>
-                        </div>
+                            {% for lesson in row.days_schedule %}
+                            <td class="day-cell day-col-{{ forloop.counter }}">
+                                {% if lesson %}
+                                    <a href="{% url 'courses:group_detail' lesson.id %}" style="text-decoration: none; display: block;">
+                                        <div class="lesson-compact-card color-{{ lesson.id|add:0|slugify|last }}">
+                                            <div class="lesson-time">{{ lesson.start_time|time:"H:i" }} - {{ lesson.end_time|time:"H:i" }}</div>
+                                            <div class="lesson-title">{{ lesson.course.name }}</div>
+                                            <div class="lesson-footer">
+                                                <span><i class="fas fa-layer-group"></i> {{ lesson.name }}</span>
+                                                <span><i class="fas fa-user-tie"></i> {{ lesson.teacher.user.get_full_name|default:"-" }}</span>
+                                            </div>
+                                        </div>
+                                    </a>
+                                {% else %}
+                                    <div class="empty-cell">-</div>
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                        </tr>
                         {% endfor %}
-                    {% else %}
-                        <div class="empty-slot-msg">Darslar mavjud emas</div>
-                    {% endif %}
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-</div>
+                    {% endfor %}
 
-<!-- Room View -->
-<div id="rooms-view" style="display: none;">
-    <div class="card-custom" style="overflow-x: auto;">
-        <table class="table-custom" style="min-width: 800px; border-collapse: separate; border-spacing: 4px;">
-            <thead>
-                <tr>
-                    <th style="width: 100px; background: var(--bg-main);">Xona</th>
-                    {% for day in schedule.keys %}
-                        <th>{{ day }}</th>
-                    {% endfor %}
-                </tr>
-            </thead>
-            <tbody>
-                {% for room, day_data in room_data.items %}
-                <tr>
-                    <td style="font-weight: 800; background: rgba(99,102,241,0.05); color: var(--primary);">{{ room }}</td>
-                    {% for day, lessons in day_data.items %}
-                    <td style="vertical-align: top; padding: 4px;">
-                        {% for g in lessons %}
-                        <div style="background: var(--bg-main); border-radius: 6px; padding: 6px; margin-bottom: 4px; border-left: 3px solid var(--primary); font-size: 11px;">
-                            <div style="font-weight: 700;">{{ g.start_time|time:"H:i" }}</div>
-                            <div style="color: var(--text-muted);">{{ g.course.name }}</div>
-                        </div>
+                    {% if no_room_rows %}
+                        {% for row in no_room_rows %}
+                        <tr class="no-room-row">
+                            {% if forloop.first %}
+                            <td class="room-cell" rowspan="{{ no_room_rows|length }}">
+                                <div class="room-name text-muted">Xonasiz</div>
+                                <div class="room-cap">Biriktirilmagan</div>
+                            </td>
+                            {% endif %}
+                            
+                            {% for lesson in row.days_schedule %}
+                            <td class="day-cell day-col-{{ forloop.counter }}">
+                                {% if lesson %}
+                                    <a href="{% url 'courses:group_detail' lesson.id %}" style="text-decoration: none; display: block;">
+                                        <div class="lesson-compact-card color-{{ lesson.id|add:0|slugify|last }}">
+                                            <div class="lesson-time">{{ lesson.start_time|time:"H:i" }} - {{ lesson.end_time|time:"H:i" }}</div>
+                                            <div class="lesson-title">{{ lesson.course.name }}</div>
+                                            <div class="lesson-footer">
+                                                <span><i class="fas fa-layer-group"></i> {{ lesson.name }}</span>
+                                                <span><i class="fas fa-user-tie"></i> {{ lesson.teacher.user.get_full_name|default:"-" }}</span>
+                                            </div>
+                                        </div>
+                                    </a>
+                                {% else %}
+                                    <div class="empty-cell">-</div>
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                        </tr>
                         {% endfor %}
-                    </td>
-                    {% endfor %}
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    function switchView(view) {
-        const weekly = document.getElementById('weekly-view');
-        const rooms = document.getElementById('rooms-view');
-        const btnWeekly = document.getElementById('btn-weekly');
-        const btnRooms = document.getElementById('btn-rooms');
-
-        if (view === 'weekly') {
-            weekly.style.display = 'block';
-            rooms.style.display = 'none';
-            btnWeekly.className = 'btn-primary-custom';
-            btnRooms.className = 'btn-outline-custom';
-        } else {
-            weekly.style.display = 'none';
-            rooms.style.display = 'block';
-            btnWeekly.className = 'btn-outline-custom';
-            btnRooms.className = 'btn-primary-custom';
-        }
-    }
-
     function showDay(index, btn) {
-        // Hide all cols
-        document.querySelectorAll('.day-col').forEach(col => col.classList.remove('active-day'));
-        // Show selected
-        document.getElementById('col-' + index).classList.add('active-day');
+        // Hide all day headers and cells
+        document.querySelectorAll('.day-column-header, .day-cell').forEach(el => {
+            el.classList.remove('active-day-mobile');
+        });
+        
+        // Show selected day headers and cells
+        document.querySelectorAll('.day-col-' + index).forEach(el => {
+            el.classList.add('active-day-mobile');
+        });
         
         // Update tabs
         document.querySelectorAll('.tab-btn').forEach(tb => tb.classList.remove('active'));
-        btn.classList.add('active');
+        if (btn) btn.classList.add('active');
     }
 
     document.addEventListener('DOMContentLoaded', function() {
         const d = new Date();
         const dayIndex = d.getDay(); // 0 (Sun) to 6 (Sat)
         let uzDayIndex;
+        // Monday is day 1 in our logic (1-7)
         if (dayIndex === 0) uzDayIndex = 7; // Sunday
         else uzDayIndex = dayIndex; // Mon-Sat (1-6)
         
-        // Highlighting today on desktop
-        const header = document.getElementById('header-' + uzDayIndex);
-        if (header) {
-            header.classList.add('is-today');
-            header.textContent += ' (BUGUN)';
-        }
+        // Highlighting today
+        const headers = document.querySelectorAll('.day-col-' + uzDayIndex + '.day-column-header');
+        headers.forEach(h => {
+            h.classList.add('is-today');
+        });
 
-        // On mobile, automatically show today
+        // Initialize mobile view
         if (window.innerWidth <= 768) {
             const tabs = document.querySelectorAll('.tab-btn');
             if (tabs[uzDayIndex - 1]) {
                 tabs[uzDayIndex - 1].click();
+            } else if (tabs[0]) {
+                tabs[0].click();
             }
         }
     });

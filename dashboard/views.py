@@ -13,6 +13,8 @@ from attendance.models import Attendance
 
 @login_required
 def home(request):
+    if request.user.role == 'student' and hasattr(request.user, 'student_profile'):
+        return redirect('students:detail', pk=request.user.student_profile.pk)
     User = get_user_model()
     now = timezone.now()
     month = now.month
@@ -58,7 +60,7 @@ def home(request):
         chart_income.append(float(income))
 
     groups_with_counts = Group.objects.filter(is_active=True).select_related('course').annotate(
-        enrolled=Count('enrollments', filter=Q(enrollments__is_active=True))
+        enrolled=Count('enrollments')
     )[:5]
 
     # Unified Upcoming Birthdays (next 30 days) from all profile types
@@ -66,16 +68,16 @@ def home(request):
     today = timezone.localdate()
     
     # 1. Students
-    student_birthdays = list(Student.objects.exclude(birth_date__isnull=True).values('first_name', 'last_name', 'birth_date'))
+    student_birthdays = list(Student.objects.exclude(birth_date__isnull=True).values('id', 'first_name', 'last_name', 'birth_date', 'photo'))
     for item in student_birthdays:
         item['role'] = "O'quvchi"
     # 2. Teachers
-    teacher_birthdays = list(Teacher.objects.exclude(birth_date__isnull=True).values('first_name', 'last_name', 'birth_date'))
+    teacher_birthdays = list(Teacher.objects.exclude(birth_date__isnull=True).values('id', 'first_name', 'last_name', 'birth_date', 'photo'))
     for item in teacher_birthdays:
         item['role'] = "O'qituvchi"
     # 3. Admins
     from admins.models import AdminProfile
-    admin_birthdays = list(AdminProfile.objects.exclude(birth_date__isnull=True).values('first_name', 'last_name', 'birth_date'))
+    admin_birthdays = list(AdminProfile.objects.exclude(birth_date__isnull=True).values('id', 'first_name', 'last_name', 'birth_date', 'photo'))
     for item in admin_birthdays:
         item['role'] = 'Admin'
     

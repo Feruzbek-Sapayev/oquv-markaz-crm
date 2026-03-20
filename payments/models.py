@@ -37,7 +37,6 @@ class Payment(models.Model):
         verbose_name = "To'lov"
         verbose_name_plural = "To'lovlar"
         ordering = ['-year', '-month', '-created_at']
-        unique_together = ['student', 'group', 'month', 'year']
 
     def __str__(self):
         return f"{self.student} | {self.group} | {self.month}/{self.year} | {self.get_status_display()}"

@@ -17,59 +17,77 @@
 <div class="row g-4">
     {% for course in courses %}
     <div class="col-md-6 col-lg-4">
-        <div class="stat-card" style="padding:24px;">
-            <a href="{% url 'courses:course_detail' course.pk %}" style="text-decoration:none; color:inherit;">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-                    {% if course.image %}
-                    <img src="{{ course.image.url }}" style="width:44px;height:44px;border-radius:12px;object-fit:cover;">
-                    {% else %}
-                    <div
-                        style="width:44px;height:44px;background:linear-gradient(135deg,var(--primary),var(--secondary));border-radius:12px;display:flex;align-items:center;justify-content:center;color:white;font-size:18px;">
-                        📖
+        <div class="card-custom course-card overflow-hidden h-100 d-flex flex-column">
+            <!-- Header Image -->
+            <a href="{% url 'courses:course_detail' course.pk %}" style="text-decoration:none; display:block;">
+                {% if course.image %}
+                    <div class="course-card-img-container" style="width:100%; height:180px;">
+                        <img src="{{ course.image.url }}" class="course-card-img" style="width:100%; height:100%; object-fit:cover;">
+                        <div style="position:absolute; bottom:0; left:0; right:0; height:60%; background:linear-gradient(transparent, rgba(0,0,0,0.8));"></div>
+                        <div style="position:absolute; bottom:12px; left:16px;">
+                            <span class="badge-custom {% if course.is_active %}badge-active{% else %}badge-inactive{% endif %}" style="backdrop-filter: blur(4px); background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); font-size:10px; padding:3px 10px;">
+                                {% if course.is_active %}Faol{% else %}Faol emas{% endif %}
+                            </span>
+                        </div>
                     </div>
-                    {% endif %}
-                    <span class="badge-custom {% if course.is_active %}badge-active{% else %}badge-inactive{% endif %}">
-                        {% if course.is_active %}Faol{% else %}Faol emas{% endif %}
-                    </span>
-                </div>
-                <div style="font-size:16px;font-weight:700;color:var(--dark);margin-bottom:6px;">{{ course.name }}</div>
+                {% else %}
+                    <div class="course-card-img-container" style="width:100%; height:180px; background:linear-gradient(135deg, var(--primary), var(--secondary)); display:flex; align-items:center; justify-content:center; color:rgba(255,255,255,0.9); font-size:40px;">
+                        <i class="fas fa-book-open"></i>
+                        <div style="position:absolute; bottom:12px; left:16px;">
+                            <span class="badge-custom {% if course.is_active %}badge-active{% else %}badge-inactive{% endif %}" style="backdrop-filter: blur(4px); background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); font-size:10px; padding:3px 10px;">
+                                {% if course.is_active %}Faol{% else %}Faol emas{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                {% endif %}
             </a>
-            {% if course.description %}
-            <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">{{ course.description|truncatechars:60 }}</div>
-            {% endif %}
-            <div style="display:flex;gap:16px;margin-bottom:16px;">
-                <div>
-                    <div style="font-size:11px;color:var(--text-muted);">Davomiyligi</div>
-                    <div style="font-size:14px;font-weight:700;color:var(--dark);">{{ course.duration_months }} oy</div>
-                </div>
-                <div>
-                    <div style="font-size:11px;color:var(--text-muted);">Oylik to'lov</div>
-                    <div style="font-size:14px;font-weight:700;color:var(--success);">
-                        {{ course.monthly_fee|money_format }} so'm
+
+            <!-- Card Body -->
+            <div class="card-body-custom" style="padding:20px; flex-grow:1; display:flex; flex-direction:column;">
+                <a href="{% url 'courses:course_detail' course.pk %}" style="text-decoration:none;">
+                    <h5 style="font-size:18px; font-weight:800; color:var(--text-heading); margin-bottom:8px; line-height:1.3;">{{ course.name }}</h5>
+                </a>
+                
+                {% if course.description %}
+                <p style="font-size:12.5px; color:var(--text-muted); line-height:1.5; margin-bottom:20px;">{{ course.description|truncatechars:85 }}</p>
+                {% else %}
+                <div style="flex-grow:1;"></div>
+                {% endif %}
+
+                <!-- Details Grid -->
+                <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; margin-bottom:20px; padding-top:16px; border-top:1px solid var(--border-subtle);">
+                    <div>
+                        <div style="font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; font-weight:600; margin-bottom:4px;">Davomiyligi</div>
+                        <div style="font-size:13.5px; font-weight:700; color:var(--text-heading);">{{ course.duration_months }} oy</div>
+                    </div>
+                    <div>
+                        <div style="font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; font-weight:600; margin-bottom:4px;">Guruhlar</div>
+                        <div style="font-size:13.5px; font-weight:700; color:var(--primary);">{{ course.groups.count }} ta</div>
+                    </div>
+                    <div>
+                        <div style="font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; font-weight:600; margin-bottom:4px;">To'lov</div>
+                        <div style="font-size:13.5px; font-weight:700; color:var(--success);">{{ course.monthly_fee|money_format }} so'm</div>
                     </div>
                 </div>
-                <div>
-                    <div style="font-size:11px;color:var(--text-muted);">Guruhlar</div>
-                    <div style="font-size:14px;font-weight:700;color:var(--primary);">{{ course.groups.count }}</div>
+
+                {% if user.is_admin_role %}
+                <div class="d-flex gap-2 mt-auto">
+                    <a href="{% url 'courses:course_edit' course.pk %}" class="btn-outline-custom" style="flex:1; justify-content:center; padding:8px; font-size:12.5px; border-radius:10px;">
+                        <i class="fas fa-edit me-2"></i> Tahrirlash
+                    </a>
+                    <button type="button" 
+                            class="delete-btn btn-action-delete"
+                            style="width:40px; height:40px; display:flex; align-items:center; justify-content:center; border:none; border-radius:10px; cursor:pointer;"
+                            data-bs-toggle="modal"
+                            data-bs-target="#deleteConfirmModal"
+                            data-url="{% url 'courses:course_delete' course.pk %}"
+                            data-name="{{ course.name }}"
+                            title="Kursni o'chirish">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
                 </div>
+                {% endif %}
             </div>
-            {% if user.is_admin_role %}
-            <div class="d-flex gap-2">
-                <a href="{% url 'courses:course_edit' course.pk %}" class="btn-outline-custom"
-                    style="flex:1;justify-content:center;padding:7px;font-size:12px;">
-                    <i class="fas fa-edit"></i> Tahrirlash
-                </a>
-                <a href="#"
-                    style="padding:7px 12px;background:rgba(239,68,68,0.1);color:var(--danger);border-radius:8px;text-decoration:none;"
-                    data-bs-toggle="modal"
-                    data-bs-target="#deleteConfirmModal"
-                    data-url="{% url 'courses:course_delete' course.pk %}"
-                    data-name="{{ course.name }}"
-                    title="Kursni o'chirish">
-                    <i class="fas fa-trash"></i>
-                </a>
-            </div>
-            {% endif %}
         </div>
     </div>
     {% empty %}

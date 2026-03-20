@@ -34,31 +34,30 @@
                 <i class="fas fa-search" style="color:var(--text-muted);"></i>
                 <input type="text" name="q" value="{{ query }}" placeholder="O'quvchi nomi...">
             </div>
-            <select name="status" class="form-select" style="width:auto;">
+            <select name="status" class="form-select" style="width:auto;" onchange="this.form.submit()">
                 <option value="">Barcha holat</option>
                 {% for val, label in statuses %}
                 <option value="{{ val }}" {% if status == val %}selected{% endif %}>{{ label }}</option>
                 {% endfor %}
             </select>
-            <select name="month" class="form-select" style="width:auto;">
+            <select name="month" class="form-select" style="width:auto;" onchange="this.form.submit()">
                 <option value="">Barcha oy</option>
                 {% for m in months %}
                 <option value="{{ m }}" {% if month == m|stringformat:'s' %}selected{% endif %}>{{ m }}-oy</option>
                 {% endfor %}
             </select>
-            <select name="year" class="form-select" style="width:auto;">
+            <select name="year" class="form-select" style="width:auto;" onchange="this.form.submit()">
                 {% for y in years %}
                 <option value="{{ y }}" {% if year == y|stringformat:'s' %}selected{% endif %}>{{ y }}</option>
                 {% endfor %}
             </select>
-            <button type="submit" class="btn-primary-custom">Filterlash</button>
             <a href="{% url 'payments:list' %}" class="btn-outline-custom">Tozalash</a>
         </form>
     </div>
 </div>
 
 <div class="card-custom">
-    <div style="overflow-x:auto;">
+    <div class="table-responsive-custom">
         <table class="table-custom">
             <thead>
                 <tr>
@@ -67,7 +66,6 @@
                     <th>Guruh</th>
                     <th>Oy/Yil</th>
                     <th>To'langan</th>
-                    <th>Kutilgan</th>
                     <th>Holat</th>
                     <th>Usul</th>
                     <th>Sana</th>
@@ -88,7 +86,6 @@
                     <td style="font-size:12px;color:var(--text-muted);">{{ p.group.name }}</td>
                     <td style="font-weight:600;">{{ p.month }}/{{ p.year }}</td>
                     <td style="font-weight:700;color:var(--success);">{{ p.amount|money_format }} so'm</td>
-                    <td style="font-size:12px;color:var(--text-muted);">{{ p.expected_amount|money_format }} so'm</td>
                     <td>
                         <span
                             class="badge-custom {% if p.status == 'paid' %}badge-paid{% elif p.status == 'unpaid' %}badge-unpaid{% else %}badge-partial{% endif %}">
@@ -122,7 +119,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="10">
+                    <td colspan="9">
                         <div class="empty-state">
                             <div class="empty-icon">💳</div>
                             <h4>To'lovlar topilmadi</h4>

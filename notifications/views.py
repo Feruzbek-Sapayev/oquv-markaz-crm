@@ -3,13 +3,74 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
 from django.db.models import Count
+from django.core.paginator import Paginator
 from .models import Notification
 from .forms import MassNotificationForm
 from accounts.models import CustomUser
 from accounts.permissions import admin_required
 
+@login_required
+def send_group_notification(request, group_pk):
+    from courses.models import Group
+    group = get_object_or_404(Group, pk=group_pk)
+    
+    # Permission check: admin or group teacher
+    if not (request.user.is_admin_role or (request.user.is_teacher and group.teacher and group.teacher.user == request.user)):
+        messages.error(request, "Xabar yuborish huquqingiz yo'q!")
+        return redirect('courses:group_detail', pk=group_pk)
+
+    if request.method == 'POST':
+        title = request.POST.get('title')
+        message = request.POST.get('message')
+        
+        if title and message:
+            # Get all active students with associated user accounts
+            enrollments = group.enrollments.filter(status='active').select_related('student__user')
+            recipients = [e.student.user for e in enrollments if e.student.user]
+            
+            if recipients:
+                notification_objs = [
+                    Notification(
+                        recipient=user,
+                        sender=request.user,
+                        title=title,
+                        message=message
+                    ) for user in recipients
+                ]
+                Notification.objects.bulk_create(notification_objs)
+                messages.success(request, f"{len(recipients)} ta o'quvchiga xabar yuborildi!")
+            else:
+                messages.warning(request, "Guruhda xabar yuborilishi mumkin bo'lgan faol o'quvchilar yo'q.")
+        else:
+            messages.error(request, "Sarlavha va xabar to'ldirilishi shart!")
+            
+    return redirect('courses:group_detail', pk=group_pk)
+
+
 @admin_required
 def send_mass_notification(request):
+    sent_messages_qs = Notification.objects.filter(sender=request.user).select_related('recipient').order_by('-created_at')
+    
+    sort = request.GET.get('sort', '')
+    if sort == 'status_asc':
+        sent_messages_qs = sent_messages_qs.order_by('is_read', '-created_at')
+    elif sort == 'status_desc':
+        sent_messages_qs = sent_messages_qs.order_by('-is_read', '-created_at')
+    elif sort == 'date_asc':
+        sent_messages_qs = sent_messages_qs.order_by('created_at')
+    elif sort == 'date_desc':
+        sent_messages_qs = sent_messages_qs.order_by('-created_at')
+
+    page_size = request.GET.get('page_size', 20)
+    try:
+        page_size = int(page_size)
+    except (ValueError, TypeError):
+        page_size = 20
+
+    paginator = Paginator(sent_messages_qs, page_size)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
     if request.method == 'POST':
         form = MassNotificationForm(request.POST)
         if form.is_valid():
@@ -37,11 +98,16 @@ def send_mass_notification(request):
             Notification.objects.bulk_create(notification_objs)
             
             messages.success(request, f"{len(recipients)} ta foydalanuvchiga xabar yuborildi!")
-            return redirect('dashboard:home')
+            return redirect('notifications:send_mass')
     else:
         form = MassNotificationForm()
     
-    return render(request, 'notifications/send_mass.html', {'form': form, 'title': "Xabar yuborish"})
+    return render(request, 'notifications/send_mass.html', {
+        'form': form, 
+        'title': "Xabarlar",
+        'page_obj': page_obj,
+        'sent_messages': page_obj
+    })
 
 @login_required
 def notification_list(request):
@@ -81,6 +147,18 @@ def get_recent_notifications(request):
             'title': n.title,
             'message': n.message[:50] + '...' if len(n.message) > 50 else n.message,
             'is_read': n.is_read,
-            'created_at': n.created_at.strftime('%d.%m %H:%i')
+            'created_at': n.created_at.strftime('%d.%m %H:%M')
         })
     return JsonResponse({'notifications': data})
+
+@login_required
+def resend_notification(request, pk):
+    original = get_object_or_404(Notification, pk=pk, sender=request.user)
+    Notification.objects.create(
+        recipient=original.recipient,
+        sender=request.user,
+        title=original.title,
+        message=original.message
+    )
+    messages.success(request, f"Xabar {original.recipient.get_full_name()} ga qayta yuborildi!")
+    return redirect('notifications:send_mass')

@@ -10,11 +10,11 @@ class CustomUserForm(UserCreationForm):
         model = CustomUser
         fields = ['username', 'first_name', 'last_name', 'email', 'phone', 'role', 'avatar', 'is_active']
         widgets = {
-            'username': forms.TextInput(attrs={'class': 'form-control'}),
-            'first_name': forms.TextInput(attrs={'class': 'form-control'}),
-            'last_name': forms.TextInput(attrs={'class': 'form-control'}),
-            'email': forms.EmailInput(attrs={'class': 'form-control'}),
-            'phone': forms.TextInput(attrs={'class': 'form-control'}),
+            'username': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Foydalanuvchi nomi'}),
+            'first_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ism'}),
+            'last_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Familiya'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'email@example.com'}),
+            'phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+998 90 123 45 67'}),
             'role': forms.Select(attrs={'class': 'form-select'}),
         }
 

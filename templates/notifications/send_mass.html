@@ -1,45 +1,165 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-8">
-        <div class="card-custom">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h4 class="mb-0">{{ title }}</h4>
-                <a href="{% url 'dashboard:home' %}" class="btn-outline-custom btn-sm">Orqaga</a>
-            </div>
+{% block title %}Xabarlar | CRM{% endblock %}
 
+{% block content %}
+<div class="page-header">
+    <div>
+        <h4 class="page-title">{{ title }}</h4>
+        <p class="page-subtitle">Yuborilgan barcha xabarnomalar tarixi</p>
+    </div>
+    <button class="btn-primary-custom" data-bs-toggle="modal" data-bs-target="#sendNotifModal">
+        <i class="fas fa-paper-plane"></i> Yangi xabar
+    </button>
+</div>
+
+<div class="card-custom">
+    <div class="table-responsive-custom">
+        <table class="table-custom">
+            <thead>
+                <tr>
+                    <th style="width: 50px;">#</th>
+                    <th style="cursor: pointer;">
+                        <a href="?page_size={{ request.GET.page_size|default:20 }}&sort={% if request.GET.sort == 'date_asc' %}date_desc{% elif request.GET.sort == 'date_desc' %}{% else %}date_asc{% endif %}" style="color: inherit; text-decoration: none; display: flex; align-items: center; gap: 5px;">
+                            Sana
+                            {% if request.GET.sort == 'date_asc' %}
+                                <i class="fas fa-sort-up text-primary"></i>
+                            {% elif request.GET.sort == 'date_desc' %}
+                                <i class="fas fa-sort-down text-primary"></i>
+                            {% else %}
+                                <i class="fas fa-sort" style="opacity: 0.2;"></i>
+                            {% endif %}
+                        </a>
+                    </th>
+                    <th>Kimga</th>
+                    <th>Sarlavha</th>
+                    <th>Xabar</th>
+                    <th style="cursor: pointer;">
+                        <a href="?page_size={{ request.GET.page_size|default:20 }}&sort={% if request.GET.sort == 'status_asc' %}status_desc{% elif request.GET.sort == 'status_desc' %}{% else %}status_asc{% endif %}" style="color: inherit; text-decoration: none; display: flex; align-items: center; gap: 5px;">
+                            Holat
+                            {% if request.GET.sort == 'status_asc' %}
+                                <i class="fas fa-sort-up text-primary"></i>
+                            {% elif request.GET.sort == 'status_desc' %}
+                                <i class="fas fa-sort-down text-primary"></i>
+                            {% else %}
+                                <i class="fas fa-sort" style="opacity: 0.2;"></i>
+                            {% endif %}
+                        </a>
+                    </th>
+                    <th style="text-align: right; width: 100px;">Amallar</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for n in sent_messages %}
+                <tr>
+                    <td style="font-size: 12px; color: var(--text-muted);">{{ forloop.counter0|add:page_obj.start_index }}</td>
+                    <td style="font-size: 11px; color: var(--text-muted); width: 130px;">
+                        <div style="font-weight: 700; color: var(--text-heading);">{{ n.created_at|date:"d.m.Y" }}</div>
+                        <div>{{ n.created_at|date:"H:i" }}</div>
+                    </td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="avatar-circle" style="width: 30px; height: 30px; font-size: 11px;">
+                                {% if n.recipient.avatar %}
+                                    <img src="{{ n.recipient.avatar.url }}" class="avatar-img">
+                                {% elif n.recipient.get_avatar_url %}
+                                    <img src="{{ n.recipient.get_avatar_url }}" class="avatar-img">
+                                {% else %}
+                                    {{ n.recipient.first_name|first|default:n.recipient.username|first }}
+                                {% endif %}
+                            </div>
+                            <div style="font-weight: 700; font-size: 13.5px;">
+                                {% if n.recipient.is_student and n.recipient.student_profile %}
+                                    <a href="{% url 'students:detail' n.recipient.student_profile.pk %}" style="color: var(--text-heading) !important; text-decoration: none;">{{ n.recipient.get_full_name }}</a>
+                                {% elif n.recipient.is_teacher and n.recipient.teacher_profile %}
+                                    <a href="{% url 'teachers:detail' n.recipient.teacher_profile.pk %}" style="color: var(--text-heading) !important; text-decoration: none;">{{ n.recipient.get_full_name }}</a>
+                                {% else %}
+                                    <span style="color: var(--text-heading);">{{ n.recipient.get_full_name }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </td>
+                    <td style="font-weight: 700; color: var(--text-heading); font-size: 13.5px;">{{ n.title }}</td>
+                    <td>
+                        <div class="text-truncate" style="max-width: 250px; font-size: 13px; color: var(--text-muted);" title="{{ n.message }}">
+                            {{ n.message }}
+                        </div>
+                    </td>
+                    <td>
+                        {% if n.is_read %}
+                        <span class="badge-custom badge-active"><i class="fas fa-check-double me-1"></i> O'qildi</span>
+                        {% else %}
+                        <span class="badge-custom badge-inactive" style="background: rgba(var(--primary-rgb), 0.1); color: var(--primary);"><i class="fas fa-check me-1"></i> Yuborildi</span>
+                        {% endif %}
+                    </td>
+                    <td style="text-align: right;">
+                        <a href="{% url 'notifications:resend' n.pk %}" class="btn-icon" title="Qayta yuborish" style="width: 28px; height: 28px; background: rgba(var(--primary-rgb), 0.1); color: var(--primary); border: none; font-size: 12px;">
+                            <i class="fas fa-redo"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center p-5">
+                        <div class="empty-state">
+                            <div class="empty-icon">✉️</div>
+                            <h4>Xabarlar yo'q</h4>
+                            <p>Hozircha yuborilgan xabarlar mavjud emas.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    </div>
+</div>
+
+{% if page_obj.paginator.count > 0 %}
+<div>
+    {% include "includes/_pagination.html" with page_obj=page_obj %}
+</div>
+{% endif %}
+
+<!-- Modal -->
+<div class="modal fade" id="sendNotifModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Yangi xabar yuborish</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
             <form method="post">
                 {% csrf_token %}
-                
-                <div class="mb-3">
-                    <label class="form-label">{{ form.recipient_type.label }}</label>
-                    {{ form.recipient_type }}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label-custom">Kimga</label>
+                        {{ form.recipient_type }}
+                    </div>
+                    <div id="specific-users-div" class="mb-3" style="display: none;">
+                        <label class="form-label-custom">Foydalanuvchilarni tanlang</label>
+                        {{ form.specific_users }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label-custom">Sarlavha</label>
+                        {{ form.title }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label-custom">Xabar matni</label>
+                        {{ form.message }}
+                    </div>
                 </div>
-
-                <div id="specific-users-div" class="mb-3" style="display: none;">
-                    <label class="form-label">{{ form.specific_users.label }}</label>
-                    {{ form.specific_users }}
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">{{ form.title.label }}</label>
-                    {{ form.title }}
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">{{ form.message.label }}</label>
-                    {{ form.message }}
-                </div>
-
-                <div class="d-grid">
-                    <button type="submit" class="btn-primary-custom">Xabar yuborish</button>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn-outline-custom" data-bs-dismiss="modal">Bekor qilish</button>
+                    <button type="submit" class="btn-primary-custom">Yuborish</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -48,16 +168,17 @@
         const typeSelect = document.querySelector('select[name="recipient_type"]');
         const specificDiv = document.getElementById('specific-users-div');
 
-        function toggleSpecific() {
-            if (typeSelect.value === 'specific') {
-                specificDiv.style.display = 'block';
-            } else {
-                specificDiv.style.display = 'none';
+        if (typeSelect) {
+            function toggleSpecific() {
+                if (typeSelect.value === 'specific') {
+                    specificDiv.style.display = 'block';
+                } else {
+                    specificDiv.style.display = 'none';
+                }
             }
+            typeSelect.addEventListener('change', toggleSpecific);
+            toggleSpecific();
         }
-
-        typeSelect.addEventListener('change', toggleSpecific);
-        toggleSpecific();
     });
 </script>
 {% endblock %}

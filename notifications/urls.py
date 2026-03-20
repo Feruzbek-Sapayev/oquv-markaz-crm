@@ -10,4 +10,6 @@ urlpatterns = [
     path('mark-all-read/', views.mark_all_as_read, name='mark_all_read'),
     path('unread-count/', views.get_unread_count, name='unread_count'),
     path('recent-notifications/', views.get_recent_notifications, name='recent_notifications'),
+    path('send-group-notification/<uuid:group_pk>/', views.send_group_notification, name='send_group'),
+    path('resend/<uuid:pk>/', views.resend_notification, name='resend'),
 ]

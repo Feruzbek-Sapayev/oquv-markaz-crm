@@ -13,7 +13,7 @@ from django.utils import timezone
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_POST
 
-from .models import AttendanceSession, Attendance
+from .models import AttendanceSession, Attendance, DailyGrade
 from .forms import AttendanceSessionForm, AttendanceFormSet
 from courses.models import Group, Enrollment
 from accounts.permissions import admin_required, teacher_required
@@ -462,3 +462,128 @@ def export_attendance_excel(request):
     response['Content-Disposition'] = f'attachment; filename="davomat_{group.id}_{start_date.month}_{start_date.year}.xlsx"'
     wb.save(response)
     return response
+
+
+@login_required
+@teacher_required
+def export_grades_excel(request):
+    group_id = request.GET.get('group')
+    month = request.GET.get('month')
+    year = request.GET.get('year')
+    
+    today = timezone.now().date()
+    try:
+        month = int(month) if month else today.month
+        year = int(year) if year else today.year
+    except ValueError:
+        month, year = today.month, today.year
+        
+    if not group_id:
+        return redirect('attendance:session_list')
+        
+    group = get_object_or_404(Group, pk=group_id)
+    if not request.user.is_admin_role and group.teacher.user != request.user:
+        messages.error(request, "Ruxsat yo'q!")
+        return redirect('courses:group_detail', pk=group_id)
+
+    start_date = datetime.date(year, month, 1)
+    last_day = calendar.monthrange(year, month)[1]
+    end_date = datetime.date(year, month, last_day)
+    
+    potential_dates = [start_date + datetime.timedelta(days=i) for i in range(last_day)]
+    schedule = group.days
+    if schedule == Group.DayChoices.ODD:
+        all_dates = [d for d in potential_dates if d.weekday() in [0, 2, 4]]
+    elif schedule == Group.DayChoices.EVEN:
+        all_dates = [d for d in potential_dates if d.weekday() in [1, 3, 5]]
+    elif schedule == Group.DayChoices.WEEKEND:
+        all_dates = [d for d in potential_dates if d.weekday() in [5, 6]]
+    else:
+        all_dates = potential_dates
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Baholar"
+    
+    header_fill = PatternFill(start_color='1E293B', end_color='1E293B', fill_type='solid')
+    header_font = Font(bold=True, color='FFFFFF')
+    
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=len(all_dates) + 1)
+    ws['A1'] = f"{group.name} Baholari ({start_date.month}/{start_date.year})"
+    ws['A1'].font = Font(bold=True, size=14)
+    ws['A1'].alignment = Alignment(horizontal='center')
+    
+    headers = ['F.I.SH'] + [d.strftime('%d') for d in all_dates]
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=2, column=col, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal='center')
+        
+    enrollments = Enrollment.objects.filter(group=group, is_active=True).select_related('student').order_by('student__last_name')
+    grade_records = DailyGrade.objects.filter(
+        session__group=group, session__date__range=[start_date, end_date]
+    ).values('student_id', 'session__date', 'score')
+    
+    grade_map = {}
+    for r in grade_records:
+        sid, d, s = r['student_id'], r['session__date'], r['score']
+        if sid not in grade_map: grade_map[sid] = {}
+        grade_map[sid][d] = s
+        
+    row_idx = 3
+    for e in enrollments:
+        ws.cell(row=row_idx, column=1, value=str(e.student))
+        for col_offset, d in enumerate(all_dates, 2):
+            score = grade_map.get(e.student.pk, {}).get(d, '')
+            ws.cell(row=row_idx, column=col_offset, value=score).alignment = Alignment(horizontal='center')
+        row_idx += 1
+        
+    for col_idx in range(1, len(all_dates) + 2):
+        ws.column_dimensions[get_column_letter(col_idx)].width = 25 if col_idx == 1 else 5
+
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename="baholar_{group.id}_{start_date.month}_{start_date.year}.xlsx"'
+    wb.save(response)
+    return response
+
+
+@require_POST
+@login_required
+@teacher_required
+def grade_update_ajax(request):
+    try:
+        data = json.loads(request.body)
+        student_id = data.get('student_id')
+        date_str = data.get('date')
+        score = data.get('score')
+        group_id = data.get('group_id')
+        
+        try:
+            date_obj = datetime.datetime.strptime(date_str, '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            return JsonResponse({'status': 'error', 'message': 'Noto\'g\'ri sana'}, status=400)
+        
+        session, _ = AttendanceSession.objects.get_or_create(
+            group_id=group_id, date=date_obj,
+            defaults={'created_by': request.user}
+        )
+        
+        if not request.user.is_admin_role and session.group.teacher.user != request.user:
+            return JsonResponse({'status': 'error', 'message': 'Ruxsat yo\'q'}, status=403)
+        
+        if score is not None and str(score).strip() != '':
+            score_val = int(score)
+            if not (1 <= score_val <= 5):
+                return JsonResponse({'status': 'error', 'message': 'Baho 1 va 5 oralig\'ida bo\'lishi kerak'}, status=400)
+            
+            grade, _ = DailyGrade.objects.update_or_create(
+                session=session, student_id=student_id,
+                defaults={'score': score_val}
+            )
+        else:
+            DailyGrade.objects.filter(session=session, student_id=student_id).delete()
+            
+        return JsonResponse({'status': 'success'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)

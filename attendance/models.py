@@ -46,3 +46,19 @@ class Attendance(models.Model):
 
     def __str__(self):
         return f"{self.student} | {self.session.date} | {self.get_status_display()}"
+
+
+class DailyGrade(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    session = models.ForeignKey(AttendanceSession, on_delete=models.CASCADE, related_name='grades', verbose_name='Sessiya')
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='daily_grades', verbose_name="O'quvchi")
+    score = models.IntegerField(default=0, verbose_name='Baho')
+    notes = models.CharField(max_length=200, blank=True, verbose_name='Izoh')
+
+    class Meta:
+        verbose_name = 'Kunlik Baho'
+        verbose_name_plural = 'Kunlik Baholar'
+        unique_together = ['session', 'student']
+
+    def __str__(self):
+        return f"{self.student} | {self.session.date} | {self.score}"

@@ -13,83 +13,10 @@
     {% endif %}
 </div>
 
-<style>
-.action-dropdown {
-    position: relative;
-    display: inline-block;
-}
-.action-dots-btn {
-    width: 34px;
-    height: 34px;
-    border: none;
-    background: rgba(99,102,241,0.08);
-    border-radius: 8px;
-    color: var(--text-muted);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    transition: background 0.2s, color 0.2s;
-}
-.action-dots-btn:hover {
-    background: rgba(99,102,241,0.18);
-    color: var(--primary);
-}
-.action-menu {
-    display: none;
-    position: absolute;
-    right: 0;
-    top: calc(100% + 6px);
-    background: var(--bg-card);
-    border: 1px solid var(--border-subtle);
-    border-radius: 12px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.18);
-    z-index: 9999;
-    min-width: 170px;
-    overflow: hidden;
-    animation: dropFadeIn 0.15s ease-out;
-}
-.action-menu.open { display: block; }
-@keyframes dropFadeIn {
-    from { opacity: 0; transform: translateY(-6px); }
-    to   { opacity: 1; transform: translateY(0); }
-}
-.action-menu a, .action-menu button {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    width: 100%;
-    padding: 10px 16px;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text-heading);
-    text-decoration: none;
-    background: none;
-    border: none;
-    cursor: pointer;
-    text-align: left;
-    transition: background 0.15s;
-}
-.action-menu a:hover, .action-menu button:hover {
-    background: rgba(99,102,241,0.07);
-}
-.action-menu a i, .action-menu button i {
-    width: 16px;
-    text-align: center;
-    opacity: 0.7;
-}
-.action-menu .menu-danger { color: var(--danger) !important; }
-.action-menu .menu-danger i { color: var(--danger); }
-.action-menu-divider {
-    height: 1px;
-    background: var(--border-subtle);
-    margin: 4px 0;
-}
-</style>
+<!-- Action menu styles are now in style.css -->
 
 <div class="card-custom">
-    <div style="overflow-x:auto;">
+    <div class="table-responsive-custom">
         <table class="table-custom">
             <thead>
                 <tr>
@@ -101,7 +28,9 @@
                     <th>Kunlar</th>
                     <th>O'quvchilar</th>
                     <th>Holat</th>
+                    {% if not user.is_student %}
                     <th style="text-align:right">Amallar</th>
+                    {% endif %}
                 </tr>
             </thead>
             <tbody>
@@ -137,32 +66,32 @@
                     <td><span
                             class="badge-custom {% if g.is_active %}badge-active{% else %}badge-inactive{% endif %}">
                             {% if g.is_active %}Faol{% else %}Faol emas{% endif %}</span></td>
+                    {% if not user.is_student %}
                     <td style="text-align:right;">
                         <div class="action-dropdown">
-                            <button class="action-dots-btn" onclick="toggleMenu(event, 'menu-{{ g.pk }}')">
+                            <button class="action-dots-btn" data-menu="menu-{{ g.pk }}">
                                 <i class="fas fa-ellipsis-vertical"></i>
                             </button>
                             <div id="menu-{{ g.pk }}" class="action-menu">
-                                {% if not user.is_student %}
-                                    {% if user.is_admin_role or user.role == 'teacher' %}
-                                    <a href="{% url 'courses:group_edit' g.pk %}">
-                                        <i class="fas fa-edit"></i> Tahrirlash
-                                    </a>
-                                    {% endif %}
-                                    {% if user.is_admin_role %}
-                                    <button class="menu-danger"
-                                        onclick="openDeleteModal('{% url 'courses:group_delete' g.pk %}', '{{ g.name }}')">
-                                        <i class="fas fa-trash"></i> O'chirish
-                                    </button>
-                                    {% endif %}
+                                {% if user.is_admin_role or user.role == 'teacher' %}
+                                <a href="{% url 'courses:group_edit' g.pk %}">
+                                    <i class="fas fa-edit"></i> Tahrirlash
+                                </a>
+                                {% endif %}
+                                {% if user.is_admin_role %}
+                                <button class="menu-danger"
+                                    onclick="openDeleteModal('{% url 'courses:group_delete' g.pk %}', '{{ g.name }}')">
+                                    <i class="fas fa-trash"></i> O'chirish
+                                </button>
                                 {% endif %}
                             </div>
                         </div>
                     </td>
+                    {% endif %}
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="9">
+                    <td colspan="{% if not user.is_student %}9{% else %}8{% endif %}">
                         <div class="empty-state">
                             <div class="empty-icon">👥</div>
                             <h4>Guruhlar mavjud emas</h4>
@@ -179,19 +108,46 @@
 {% include 'includes/_pagination.html' %}
 
 <script>
-function toggleMenu(event, menuId) {
-    event.stopPropagation();
-    // Close all other open menus
-    document.querySelectorAll('.action-menu.open').forEach(m => {
-        if (m.id !== menuId) m.classList.remove('open');
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.action-dots-btn[data-menu]').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const menuId = this.getAttribute('data-menu');
+            const menu = document.getElementById(menuId);
+            const isOpen = menu.classList.contains('open');
+
+            document.querySelectorAll('.action-menu.open').forEach(m => m.classList.remove('open'));
+
+            if (!isOpen) {
+                const rect = this.getBoundingClientRect();
+                menu.classList.add('open');
+                
+                const menuHeight = menu.offsetHeight;
+                const menuWidth = menu.offsetWidth;
+                
+                menu.style.top = (rect.top + (rect.height / 2) - (menuHeight / 2)) + 'px';
+                
+                let left = rect.left - menuWidth - 8;
+                if (left < 8) left = 8;
+                menu.style.left = left + 'px';
+                
+                requestAnimationFrame(() => {
+                    if (parseFloat(menu.style.top) < 8) menu.style.top = '8px';
+                    if (parseFloat(menu.style.top) + menuHeight > window.innerHeight - 8) {
+                        menu.style.top = (window.innerHeight - menuHeight - 8) + 'px';
+                    }
+                });
+            }
+        });
     });
-    document.getElementById(menuId).classList.toggle('open');
-}
+
+    document.addEventListener('click', function() {
+        document.querySelectorAll('.action-menu.open').forEach(m => m.classList.remove('open'));
+    });
+});
 
 function openDeleteModal(url, name) {
-    // Close dropdown
     document.querySelectorAll('.action-menu.open').forEach(m => m.classList.remove('open'));
-    // Open the existing delete confirm modal
     const modal = document.getElementById('deleteConfirmModal');
     if (modal) {
         modal.querySelector('form').action = url;
@@ -200,10 +156,5 @@ function openDeleteModal(url, name) {
         new bootstrap.Modal(modal).show();
     }
 }
-
-// Close menus when clicking outside
-document.addEventListener('click', function() {
-    document.querySelectorAll('.action-menu.open').forEach(m => m.classList.remove('open'));
-});
 </script>
 {% endblock %}

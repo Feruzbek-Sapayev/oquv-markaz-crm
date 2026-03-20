@@ -93,8 +93,12 @@
                                 </div>
                             </td>
                             <td>
-                                <div style="font-size:13px;font-weight:600;color:var(--text-heading);">{{ group.name }}</div>
-                                <div style="font-size:11px;color:var(--text-muted);">{{ group.course.name }}</div>
+                                <div style="font-size:13px;font-weight:600;color:var(--text-heading);">
+                                    <a href="{% url 'courses:group_detail' group.pk %}" style="text-decoration:none;color:inherit;">{{ group.name }}</a>
+                                </div>
+                                <div style="font-size:11px;color:var(--text-muted);">
+                                    <a href="{% url 'courses:course_detail' group.course.pk %}" style="text-decoration:none;color:inherit;">{{ group.course.name }}</a>
+                                </div>
                             </td>
                             <td style="text-align:right;">
                                 <div style="font-size:13px;font-weight:700;color:var(--primary);">
@@ -126,13 +130,25 @@
                     <tbody>
                         {% for st in upcoming_birthdays %}
                         <tr>
-                            <td style="width: 64px;">
+                             <td style="width: 64px;">
                                 <div class="avatar-circle">
-                                    {{ st.first_name|first }}
+                                    {% if st.photo %}
+                                        <img src="/media/{{ st.photo }}" class="avatar-img" style="width:100%; height:100%; border-radius:inherit; object-fit:cover;">
+                                    {% else %}
+                                        {{ st.first_name|first }}
+                                    {% endif %}
                                 </div>
                             </td>
                             <td>
-                                <div style="font-size:13px;font-weight:600;color:var(--text-heading);">{{ st.last_name }} {{ st.first_name }}</div>
+                                <div style="font-size:13px;font-weight:600;color:var(--text-heading);">
+                                    {% if st.role == "O'quvchi" %}
+                                        <a href="{% url 'students:detail' st.id %}" style="text-decoration:none;color:inherit;">{{ st.last_name }} {{ st.first_name }}</a>
+                                    {% elif st.role == "O'qituvchi" %}
+                                        <a href="{% url 'teachers:detail' st.id %}" style="text-decoration:none;color:inherit;">{{ st.last_name }} {{ st.first_name }}</a>
+                                    {% else %}
+                                        {{ st.last_name }} {{ st.first_name }}
+                                    {% endif %}
+                                </div>
                                 <div style="font-size:11px;color:var(--text-muted);">{{ st.birth_date|date:"d-F" }} · <span style="color:var(--primary);font-weight:500;">{{ st.role }}</span></div>
                             </td>
                             <td style="text-align:right;">
@@ -170,12 +186,22 @@
                     <tbody>
                         {% for p in recent_payments|slice:":5" %}
                         <tr>
-                            <td style="width:64px;">
-                                <div class="avatar-circle">{{ p.student.first_name|first }}</div>
+                             <td style="width:64px;">
+                                <div class="avatar-circle">
+                                    {% if p.student.photo %}
+                                        <img src="{{ p.student.photo.url }}" class="avatar-img" style="width:100%; height:100%; border-radius:inherit; object-fit:cover;">
+                                    {% else %}
+                                        {{ p.student.first_name|first }}
+                                    {% endif %}
+                                </div>
                             </td>
                             <td>
-                                <div style="font-size:13px;font-weight:600;color:var(--text-heading);">{{ p.student }}</div>
-                                <div style="font-size:11px;color:var(--text-muted);">{{ p.group.name }}</div>
+                                <div style="font-size:13px;font-weight:600;color:var(--text-heading);">
+                                    <a href="{% url 'students:detail' p.student.pk %}" style="text-decoration:none;color:inherit;">{{ p.student }}</a>
+                                </div>
+                                <div style="font-size:11px;color:var(--text-muted);">
+                                    <a href="{% url 'courses:group_detail' p.group.pk %}" style="text-decoration:none;color:inherit;">{{ p.group.name }}</a>
+                                </div>
                             </td>
                             <td style="text-align:right;">
                                 <div style="font-size:13px;font-weight:600;color:var(--dark);">{{ p.amount|money_format }}</div>
@@ -207,12 +233,20 @@
                         <tr>
                             <td style="width: 64px;">
                                 <div class="avatar-circle">
-                                    {{ p.student.first_name|first }}
+                                    {% if p.student.photo %}
+                                        <img src="{{ p.student.photo.url }}" class="avatar-img" style="width:100%; height:100%; border-radius:inherit; object-fit:cover;">
+                                    {% else %}
+                                        {{ p.student.first_name|first }}
+                                    {% endif %}
                                 </div>
                             </td>
                             <td>
-                                <div style="font-size:13px;font-weight:600;color:var(--text-heading);">{{ p.student }}</div>
-                                <div style="font-size:11px;color:var(--text-muted);">{{ p.group.course.name }}</div>
+                                <div style="font-size:13px;font-weight:600;color:var(--text-heading);">
+                                    <a href="{% url 'students:detail' p.student.pk %}" style="text-decoration:none;color:inherit;">{{ p.student }}</a>
+                                </div>
+                                <div style="font-size:11px;color:var(--text-muted);">
+                                    <a href="{% url 'courses:group_detail' p.group.pk %}" style="text-decoration:none;color:inherit;">{{ p.group.name }}</a>
+                                </div>
                             </td>
                             <td style="text-align:right;">
                                 <div style="font-size:13px;font-weight:700;color:var(--danger);">

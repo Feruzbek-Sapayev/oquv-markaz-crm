@@ -26,18 +26,26 @@
 <body>
 
 <!-- SIDEBAR -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-brand">
-    <a href="{% url 'dashboard:home' %}" class="brand-logo">
-      <div class="brand-icon">🎓</div>
+    <button class="sidebar-close-btn d-lg-none" onclick="closeSidebar()">
+      <i class="fas fa-times"></i>
+    </button>
+    <a href="{% if user.is_student %}{% url 'courses:group_list' %}{% else %}{% url 'dashboard:home' %}{% endif %}" class="brand-logo">
+      <div class="brand-icon" style="background: none; padding: 0; overflow: hidden; box-shadow: none;">
+        <img src="{% static 'img/logo.jpg' %}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 10px;">
+      </div>
       <div class="brand-text">
-        <div class="name">O'quv Markaz</div>
-        <div class="tagline">CRM Tizim</div>
+        <div class="name">Oxford</div>
+        <div class="tagline">O'QUV MARKAZI</div>
       </div>
     </a>
   </div>
 
   <nav class="sidebar-nav">
+    {% if not user.is_student %}
     <div class="nav-section-title">Asosiy</div>
 
     <div class="nav-item">
@@ -46,6 +54,7 @@
         <span>Dashboard</span>
       </a>
     </div>
+    {% endif %}
 
     <div class="nav-section-title">O'quv Jarayon</div>
 
@@ -67,7 +76,7 @@
 
     {% if user.is_admin_role %}
     <div class="nav-item">
-      <a href="{% url 'courses:course_list' %}" class="{% if request.resolver_match.app_name == 'courses' and 'group' not in request.path and 'schedule' not in request.path %}active{% endif %}">
+      <a href="{% url 'courses:course_list' %}" class="{% if request.resolver_match.app_name == 'courses' and 'group' not in request.path and 'schedule' not in request.path and 'room' not in request.path %}active{% endif %}">
         <span class="nav-icon"><i class="fas fa-book-open"></i></span>
         <span>Kurslar</span>
       </a>
@@ -87,6 +96,15 @@
         <span>Dars Jadvali</span>
       </a>
     </div>
+
+    {% if user.is_admin_role %}
+    <div class="nav-item">
+      <a href="{% url 'courses:room_list' %}" class="{% if 'rooms' in request.path %}active{% endif %}">
+        <span class="nav-icon"><i class="fas fa-door-open"></i></span>
+        <span>Xonalar</span>
+      </a>
+    </div>
+    {% endif %}
 
 
     {% if not user.is_student %}
@@ -119,33 +137,12 @@
     </div>
     <div class="nav-item">
       <a href="{% url 'notifications:send_mass' %}" class="{% if 'notifications' in request.path and 'list' not in request.path %}active{% endif %}">
-        <span class="nav-icon"><i class="fas fa-paper-plane"></i></span>
-        <span>Xabar yuborish</span>
+        <span class="nav-icon"><i class="fas fa-envelope-open-text"></i></span>
+        <span>Xabarlar</span>
       </a>
     </div>
     {% endif %}
   </nav>
-
-  <div class="sidebar-footer">
-    <div class="user-card">
-      <a href="{% url 'accounts:profile' %}" style="display:flex; align-items:center; gap:12px; text-decoration:none; color:inherit; flex-grow:1;" title="Profilga o'tish">
-        <div class="user-avatar">
-          {% if user.get_avatar_url %}
-            <img src="{{ user.get_avatar_url }}" class="avatar-img">
-          {% else %}
-            {{ user.username|first|upper }}
-          {% endif %}
-        </div>
-        <div class="user-info">
-          <div class="uname">{{ user.get_full_name|default:user.username|truncatechars:18 }}</div>
-          <div class="urole">{{ user.get_role_display }}</div>
-        </div>
-      </a>
-      <a href="{% url 'accounts:logout' %}" title="Chiqish" style="color:#94a3b8; font-size:14px;">
-        <i class="fas fa-right-from-bracket"></i>
-      </a>
-    </div>
-  </div>
 </aside>
 
 <!-- MAIN CONTENT -->
@@ -153,7 +150,7 @@
   <!-- TOPBAR -->
   <header class="topbar">
     <div class="d-flex align-items-center gap-3">
-      <button class="btn-icon d-lg-none" onclick="document.getElementById('sidebar').style.transform='translateX(0)'">
+      <button class="btn-icon d-lg-none" onclick="toggleSidebar()">
         <i class="fas fa-bars"></i>
       </button>
       <div>
@@ -161,15 +158,6 @@
       </div>
     </div>
     <div class="topbar-actions">
-      <div class="topbar-date" style="font-weight: 500; font-size: 14px;">
-        {% if upcoming_class %}
-          <i class="fas fa-bell text-primary me-1"></i>
-          <span>{{ upcoming_class.name }} ({{ upcoming_class.start_time|time:"H:i" }})</span>
-        {% else %}
-          <i class="fas fa-clock me-1"></i>
-          <span id="livetime"></span>
-        {% endif %}
-      </div>
       <button type="button" class="btn-icon theme-toggle" id="themeToggle" title="Tema">
         <i class="fas fa-moon"></i>
       </button>
@@ -197,10 +185,28 @@
       <a href="{% url 'payments:create' %}" class="btn-primary-custom d-none d-md-inline-flex">
         <i class="fas fa-plus"></i> To'lov
       </a>
-      <a href="{% url 'students:create' %}" class="btn-outline-custom d-none d-md-inline-flex">
-        <i class="fas fa-user-plus"></i> O'quvchi
-      </a>
       {% endif %}
+
+      <!-- Topbar User Profile -->
+      <div class="nav-item dropdown px-2" id="user-profile-dropdown">
+        <a href="#" class="d-flex align-items-center gap-2 text-decoration-none dropdown-toggle user-nav-link" data-bs-toggle="dropdown" aria-expanded="false">
+          <div class="user-avatar" style="width: 32px; height: 32px; font-size: 13px;">
+            {% if user.get_avatar_url %}
+              <img src="{{ user.get_avatar_url }}" class="avatar-img">
+            {% else %}
+              {{ user.username|first|upper }}
+            {% endif %}
+          </div>
+          <div class="user-nav-info d-none d-md-block">
+            <div class="uname text-truncate" style="max-width: 120px;">{{ user.get_full_name|default:user.username }}</div>
+            <div class="urole">{{ user.get_role_display }}</div>
+          </div>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg p-1 mt-2" style="background: var(--bg-card); min-width: 150px;">
+          <li><a class="dropdown-item profile-item" href="{% url 'accounts:profile' %}"><i class="fas fa-user-circle"></i> Profil</a></li>
+          <li><a class="dropdown-item logout-item" href="{% url 'accounts:logout' %}"><i class="fas fa-right-from-bracket"></i> Chiqish</a></li>
+        </ul>
+      </div>
     </div>
   </header>
 
@@ -303,6 +309,25 @@
     updateThemeIcon();
     window.dispatchEvent(new CustomEvent('themeChanged', { detail: { theme: isDark ? 'dark' : 'light' } }));
   });
+
+  function openSidebar() {
+    document.getElementById('sidebar').classList.add('active');
+    document.getElementById('sidebarOverlay').classList.add('active');
+  }
+
+  function closeSidebar() {
+    document.getElementById('sidebar').classList.remove('active');
+    document.getElementById('sidebarOverlay').classList.remove('active');
+  }
+
+  function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar.classList.contains('active')) {
+      closeSidebar();
+    } else {
+      openSidebar();
+    }
+  }
 
   // Live clock
   function updateTime() {

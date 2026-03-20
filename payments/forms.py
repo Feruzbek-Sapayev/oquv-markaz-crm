@@ -11,13 +11,13 @@ class PaymentForm(forms.ModelForm):
         widgets = {
             'student': forms.Select(attrs={'class': 'form-select'}),
             'group': forms.Select(attrs={'class': 'form-select'}),
-            'amount': forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
+            'amount': forms.NumberInput(attrs={'class': 'form-control', 'min': 0, 'placeholder': 'To\'lov summasi'}),
             'method': forms.Select(attrs={'class': 'form-select'}),
-            'month': forms.NumberInput(attrs={'class': 'form-control', 'min': 1, 'max': 12}),
-            'year': forms.NumberInput(attrs={'class': 'form-control', 'min': 2020}),
+            'month': forms.NumberInput(attrs={'class': 'form-control', 'min': 1, 'max': 12, 'placeholder': 'Oy (1-12)'}),
+            'year': forms.NumberInput(attrs={'class': 'form-control', 'min': 2020, 'placeholder': 'Yil'}),
             'paid_at': forms.DateInput(format='%Y-%m-%d', attrs={'class': 'form-control', 'type': 'date'}),
             'due_date': forms.DateInput(format='%Y-%m-%d', attrs={'class': 'form-control', 'type': 'date'}),
-            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'To\'lov haqida qo\'shimcha ma\'lumot...'}),
         }
 
     def __init__(self, *args, **kwargs):
