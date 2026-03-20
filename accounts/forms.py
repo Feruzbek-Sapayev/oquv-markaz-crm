@@ -16,6 +16,7 @@ class CustomUserForm(UserCreationForm):
             'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'email@example.com'}),
             'phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+998 90 123 45 67'}),
             'role': forms.Select(attrs={'class': 'form-select'}),
+            'avatar': forms.ClearableFileInput(attrs={'class': 'form-control'}),
         }
 
     teacher_profile = forms.ModelChoiceField(

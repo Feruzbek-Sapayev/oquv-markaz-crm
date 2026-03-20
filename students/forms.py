@@ -24,7 +24,7 @@ class StudentForm(forms.ModelForm):
             'gender': forms.Select(attrs={'class': 'form-select'}),
             'birth_date': forms.DateInput(format='%Y-%m-%d', attrs={'class': 'form-control', 'type': 'date'}),
             'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Yashash manzili...'}),
-            'photo': forms.FileInput(attrs={'class': 'form-control'}),
+            'photo': forms.ClearableFileInput(attrs={'class': 'form-control'}),
             'status': forms.Select(attrs={'class': 'form-select'}),
             'telegram_id': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Masalan: 123456789'}),
             'telegram_notifications': forms.CheckboxInput(attrs={'class': 'form-check-input'}),

@@ -37,6 +37,15 @@
                 </label>
                 <input type="file" id="id_photo" name="photo" accept="image/*" style="display:none;"
                     onchange="previewPhoto(this)">
+
+                {% if obj and obj.photo %}
+                <div class="mt-2" id="deletePhotoContainer">
+                    <input type="checkbox" name="photo-clear" id="photo_clear" style="display:none;">
+                    <button type="button" class="btn btn-link text-danger text-decoration-none small p-0 fw-bold" onclick="clearExistingPhoto()" style="font-size: 11px;">
+                        <i class="fas fa-trash-alt me-1"></i> Rasmni o'chirish
+                    </button>
+                </div>
+                {% endif %}
             </div>
         </div>
 
@@ -147,6 +156,25 @@ function previewPhoto(input) {
         };
         reader.readAsDataURL(input.files[0]);
     }
+}
+
+function clearExistingPhoto() {
+    confirmAction("Rasmni o'chirish", "Haqiqatan ham ushbu rasmni o'chirmoqchimisiz?", function() {
+        const preview = document.getElementById('photoPreview');
+        const initial = document.getElementById('photoInitial');
+        const input = document.getElementById('id_photo');
+        const clearCheckbox = document.getElementById('photo_clear');
+        const container = document.getElementById('deletePhotoContainer');
+
+        if (clearCheckbox) clearCheckbox.checked = true;
+        if (input) input.value = '';
+        if (preview) {
+            preview.src = '';
+            preview.style.display = 'none';
+        }
+        if (initial) initial.style.display = 'flex';
+        if (container) container.style.display = 'none';
+    });
 }
 </script>
 {% endblock %}

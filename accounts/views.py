@@ -83,7 +83,9 @@ def profile_edit_view(request):
         user.last_name = request.POST.get('last_name', user.last_name)
         user.email = request.POST.get('email', user.email)
         user.phone = request.POST.get('phone', user.phone)
-        if request.FILES.get('avatar'):
+        if request.POST.get('avatar-clear') == 'on':
+            user.avatar = None
+        elif request.FILES.get('avatar'):
             user.avatar = request.FILES['avatar']
         user.save()
 
@@ -99,7 +101,9 @@ def profile_edit_view(request):
                 profile.middle_name = request.POST.get('middle_name', profile.middle_name)
             if hasattr(profile, 'address'):
                 profile.address = request.POST.get('address', profile.address)
-            if request.FILES.get('photo'):
+            if request.POST.get('photo-clear') == 'on':
+                profile.photo = None
+            elif request.FILES.get('photo'):
                 profile.photo = request.FILES['photo']
             profile.save()
 

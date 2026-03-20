@@ -241,6 +241,25 @@
   </div>
 </div>
 
+<!-- GENERIC CONFIRMATION MODAL -->
+<div class="modal fade" id="genericConfirmModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content border-0 shadow-lg" style="border-radius: 20px; background: var(--bg-card);">
+      <div class="modal-body text-center p-4">
+        <div class="mb-3" style="width: 50px; height: 50px; background: rgba(239, 68, 68, 0.1); color: var(--danger); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; margin: 0 auto;">
+          <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <h6 class="mb-1" id="genericConfirmTitle" style="font-weight: 700; color: var(--text-heading);">Ishonchingiz komilmi?</h6>
+        <p class="text-muted mb-4" id="genericConfirmMessage" style="font-size: 12px; margin-bottom: 24px !important;">Haqiqatan ham ushbu amalni bajarmoqchimisiz?</p>
+        <div class="d-flex gap-2">
+          <button type="button" class="btn-outline-custom w-100" data-bs-dismiss="modal" style="font-size: 12px; padding: 8px;">Yo'q</button>
+          <button type="button" id="genericConfirmBtn" class="btn btn-danger w-100" style="background: var(--danger); border: none; border-radius: 10px; font-weight: 600; font-size: 12px; padding: 8px;">Ha</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- TOAST NOTIFICATIONS -->
 <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index:2000;">
   {% if messages %}
@@ -282,6 +301,35 @@
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
+  // Generic Confirm Helper
+  window.confirmAction = function(title, message, onConfirm) {
+      const modalEl = document.getElementById('genericConfirmModal');
+      if (!modalEl) {
+          console.error("Confirm modal element not found!");
+          if (confirm(message)) onConfirm();
+          return;
+      }
+      
+      let bsModal = bootstrap.Modal.getInstance(modalEl);
+      if (!bsModal) {
+          bsModal = new bootstrap.Modal(modalEl);
+      }
+      
+      document.getElementById('genericConfirmTitle').innerText = title;
+      document.getElementById('genericConfirmMessage').innerText = message;
+      
+      const confirmBtn = document.getElementById('genericConfirmBtn');
+      const newConfirmBtn = confirmBtn.cloneNode(true);
+      confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+      
+      newConfirmBtn.addEventListener('click', function() {
+          onConfirm();
+          bsModal.hide();
+      });
+      
+      bsModal.show();
+  };
+
   // Theme toggle
   const themeToggle = document.getElementById('themeToggle');
   

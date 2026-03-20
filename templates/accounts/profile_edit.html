@@ -39,6 +39,16 @@
                             </label>
                             <input type="file" id="id_photo" name="photo" accept="image/*" style="display:none;"
                                 onchange="previewProfilePhoto(this)">
+
+                            {% if user.avatar or profile.photo %}
+                            <div class="mt-2" id="deletePhotoContainer">
+                                <input type="checkbox" name="photo-clear" id="photo_clear" style="display:none;">
+                                <input type="checkbox" name="avatar-clear" id="avatar_clear" style="display:none;">
+                                <button type="button" class="btn btn-link text-danger text-decoration-none small p-0 fw-bold" onclick="clearProfilePhoto()" style="font-size: 11px;">
+                                    <i class="fas fa-trash-alt me-1"></i> Rasmni o'chirish
+                                </button>
+                            </div>
+                            {% endif %}
                         </div>
                     </div>
 
@@ -117,6 +127,35 @@ function previewProfilePhoto(input) {
         };
         reader.readAsDataURL(input.files[0]);
     }
+}
+
+function clearProfilePhoto() {
+    confirmAction("Rasmni o'chirish", "Haqiqatan ham rasmni o'chirmoqchimisiz?", function() {
+        const preview = document.getElementById('avatarPreview');
+        const input = document.getElementById('id_photo');
+        const photoClear = document.getElementById('photo_clear');
+        const avatarClear = document.getElementById('avatar_clear');
+        const container = document.getElementById('deletePhotoContainer');
+
+        if (photoClear) photoClear.checked = true;
+        if (avatarClear) avatarClear.checked = true;
+        if (input) input.value = '';
+        
+        if (preview) {
+             // If preview is an image, replace it with a div
+            if (preview.tagName === 'IMG') {
+                const div = document.createElement('div');
+                div.id = 'avatarPreview';
+                div.className = 'avatar-preview-placeholder';
+                div.style.cssText = 'width:90px;height:90px;background:linear-gradient(135deg,var(--primary),var(--secondary));border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:36px;font-weight:800;margin:0 auto 12px;';
+                div.innerHTML = "{{ user.username|first|upper }}";
+                preview.parentNode.replaceChild(div, preview);
+            } else {
+                // Already a div, just leave it
+            }
+        }
+        if (container) container.style.display = 'none';
+    });
 }
 </script>
 {% endblock %}
